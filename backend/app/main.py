@@ -1,4 +1,8 @@
 from fastapi import FastAPI
+from sqlalchemy import text
+
+from backend.app.database import engine
+
 
 app = FastAPI(
     title="Get Connected Bulletin API",
@@ -18,4 +22,14 @@ def root():
 def health():
     return {
         "status": "healthy"
+    }
+
+
+@app.get("/db-health")
+def database_health():
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+    return {
+        "database": "connected"
     }
