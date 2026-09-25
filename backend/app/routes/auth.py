@@ -167,18 +167,3 @@ def current_user(
         role=user.role,
         verification_status=user.verification_status,
     )
-
-
-@router.get(
-    "/me",
-    response_model=CurrentUserResponse,
-)
-def current_user(
-    user: User = Depends(get_current_user),
-):
-    return CurrentUserResponse(
-        id=user.id,
-        username=user.username,
-        role=user.role,
-        verification_status=user.verification_status,
-    )
