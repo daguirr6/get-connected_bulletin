@@ -142,6 +142,33 @@ def require_admin(
     return user
 
 
+def require_verified_user(
+    user: User = Depends(get_current_user),
+):
+    if user.verification_status != "verified":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account must be verified first",
+        )
+
+    return user
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+)
+def current_user(
+    user: User = Depends(get_current_user),
+):
+    return CurrentUserResponse(
+        id=user.id,
+        username=user.username,
+        role=user.role,
+        verification_status=user.verification_status,
+    )
+
+
 @router.get(
     "/me",
     response_model=CurrentUserResponse,
