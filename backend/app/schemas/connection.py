@@ -9,3 +9,10 @@ class ConnectionResponse(BaseModel):
     display_name: str
     major: str
     connected_at: datetime
+
+class ConnectionSuggestionResponse(BaseModel):
+    user_id: int
+    display_name: str
+    major: str
+    mutual_count: int
+    mutual_connections: list[str]
