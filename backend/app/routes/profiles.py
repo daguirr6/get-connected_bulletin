@@ -14,7 +14,8 @@ from backend.app.schemas.profile import (
     ProfileUpdate,
     PublicProfileResponse,
 )
-
+from backend.app.models.post_it import PostIt
+from backend.app.models.verification import VerificationRequest
 
 router = APIRouter(
     prefix="/profiles",
@@ -191,8 +192,28 @@ def get_public_profile(
             detail="Profile not found",
         )
 
+    post_it = db.scalar(
+        select(PostIt).where(
+            PostIt.user_id == user_id
+        )
+    )
+
+    verification = db.scalar(
+        select(VerificationRequest).where(
+            VerificationRequest.user_id == user_id
+        )
+    )
+
+    if post_it is None or verification is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile information not found",
+        )
+
     return PublicProfileResponse(
         user_id=profile.user_id,
+        display_name=post_it.display_name,
+        major=verification.major,
         about_me=profile.about_me,
         interests=profile.interests,
         favorite_quote=profile.favorite_quote,
