@@ -1,10 +1,20 @@
+import asyncio
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from backend.app.database import get_db
+from backend.app.database import SessionLocal, get_db
+from backend.app.security import decode_access_token
+from backend.app.websocket_manager import manager
 from backend.app.models.connection import Connection
 from backend.app.models.message import Message
 from backend.app.models.post_it import PostIt
@@ -254,3 +264,227 @@ def mark_chat_read(
         connection_id=connection_id,
         marked_read=len(unread_messages),
     )
+
+@router.websocket("/{connection_id}/ws")
+async def chat_websocket(
+    websocket: WebSocket,
+    connection_id: int,
+):
+    await websocket.accept()
+
+    user_id = None
+
+    try:
+        try:
+            auth_data = await asyncio.wait_for(
+                websocket.receive_json(),
+                timeout=10,
+            )
+        except asyncio.TimeoutError:
+            await websocket.close(
+                code=1008,
+                reason="Authentication timed out",
+            )
+            return
+
+        if not isinstance(auth_data, dict):
+            await websocket.close(
+                code=1008,
+                reason="Invalid authentication",
+            )
+            return
+
+        if auth_data.get("type") != "auth":
+            await websocket.close(
+                code=1008,
+                reason="Authentication required",
+            )
+            return
+
+        token = auth_data.get("token")
+
+        if not isinstance(token, str):
+            await websocket.close(
+                code=1008,
+                reason="Invalid authentication",
+            )
+            return
+
+        decoded_user_id = decode_access_token(token)
+
+        if decoded_user_id is None:
+            await websocket.close(
+                code=1008,
+                reason="Invalid or expired login",
+            )
+            return
+
+        with SessionLocal() as db:
+            user = db.get(User, decoded_user_id)
+            connection = db.get(Connection, connection_id)
+
+            if user is None:
+                await websocket.close(
+                    code=1008,
+                    reason="User not found",
+                )
+                return
+
+            if user.verification_status != "verified":
+                await websocket.close(
+                    code=1008,
+                    reason="Account is not verified",
+                )
+                return
+
+            if connection is None:
+                await websocket.close(
+                    code=1008,
+                    reason="Connection not found",
+                )
+                return
+
+            belongs_to_user = (
+                connection.user_one_id == user.id
+                or connection.user_two_id == user.id
+            )
+
+            if not belongs_to_user:
+                await websocket.close(
+                    code=1008,
+                    reason="You do not have access to this chat",
+                )
+                return
+
+            user_id = user.id
+
+        manager.connect(
+            connection_id,
+            user_id,
+            websocket,
+        )
+
+        await websocket.send_json(
+            {
+                "type": "ready",
+                "connection_id": connection_id,
+                "user_id": user_id,
+            }
+        )
+
+        while True:
+            data = await websocket.receive_json()
+
+            if not isinstance(data, dict):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Invalid message",
+                    }
+                )
+                continue
+
+            if data.get("type") != "message":
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Unknown message type",
+                    }
+                )
+                continue
+
+            content = data.get("content")
+
+            if not isinstance(content, str):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message content is required",
+                    }
+                )
+                continue
+
+            content = content.strip()
+
+            if not content:
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message cannot be empty",
+                    }
+                )
+                continue
+
+            if len(content) > 2000:
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message is too long",
+                    }
+                )
+                continue
+
+            with SessionLocal() as db:
+                user = db.get(User, user_id)
+                connection = db.get(
+                    Connection,
+                    connection_id,
+                )
+
+                if user is None or connection is None:
+                    await websocket.close(
+                        code=1008,
+                        reason="Chat access ended",
+                    )
+                    return
+
+                belongs_to_user = (
+                    connection.user_one_id == user.id
+                    or connection.user_two_id == user.id
+                )
+
+                if (
+                    user.verification_status != "verified"
+                    or not belongs_to_user
+                ):
+                    await websocket.close(
+                        code=1008,
+                        reason="Chat access ended",
+                    )
+                    return
+
+                message = Message(
+                    connection_id=connection_id,
+                    sender_id=user_id,
+                    content=content,
+                )
+
+                db.add(message)
+                db.commit()
+                db.refresh(message)
+
+                message_data = {
+                    "type": "message",
+                    "id": message.id,
+                    "connection_id": message.connection_id,
+                    "sender_id": message.sender_id,
+                    "content": message.content,
+                    "created_at": message.created_at.isoformat(),
+                    "read_at": None,
+                }
+
+            await manager.broadcast(
+                connection_id,
+                message_data,
+            )
+
+    except WebSocketDisconnect:
+        pass
+
+    finally:
+        if user_id is not None:
+            manager.disconnect(
+                connection_id,
+                user_id,
+                websocket,
+            )
