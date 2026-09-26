@@ -41,19 +41,40 @@ class ConnectionManager:
         if not self.active_connections[connection_id]:
             del self.active_connections[connection_id]
 
+    def is_user_connected(
+        self,
+        connection_id: int,
+        user_id: int,
+    ) -> bool:
+        sockets = self.active_connections.get(
+            connection_id,
+            [],
+        )
+
+        return any(
+            active_user_id == user_id
+            for active_user_id, _ in sockets
+        )
+
     async def broadcast(
         self,
         connection_id: int,
         data: dict,
     ):
-        sockets = self.active_connections.get(connection_id, [])
+        sockets = self.active_connections.get(
+            connection_id,
+            [],
+        )
+
         disconnected = []
 
         for user_id, websocket in sockets:
             try:
                 await websocket.send_json(data)
             except Exception:
-                disconnected.append((user_id, websocket))
+                disconnected.append(
+                    (user_id, websocket)
+                )
 
         for user_id, websocket in disconnected:
             self.disconnect(

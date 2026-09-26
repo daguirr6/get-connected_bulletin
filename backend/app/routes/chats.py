@@ -319,9 +319,19 @@ async def chat_websocket(
             )
             return
 
+        unread_message_ids = []
+        read_time = None
+
         with SessionLocal() as db:
-            user = db.get(User, decoded_user_id)
-            connection = db.get(Connection, connection_id)
+            user = db.get(
+                User,
+                decoded_user_id,
+            )
+
+            connection = db.get(
+                Connection,
+                connection_id,
+            )
 
             if user is None:
                 await websocket.close(
@@ -358,6 +368,25 @@ async def chat_websocket(
 
             user_id = user.id
 
+            unread_messages = db.scalars(
+                select(Message).where(
+                    Message.connection_id == connection_id,
+                    Message.sender_id != user.id,
+                    Message.read_at.is_(None),
+                )
+            ).all()
+
+            if unread_messages:
+                read_time = datetime.now(timezone.utc)
+
+                for message in unread_messages:
+                    message.read_at = read_time
+                    unread_message_ids.append(
+                        message.id
+                    )
+
+                db.commit()
+
         manager.connect(
             connection_id,
             user_id,
@@ -371,6 +400,18 @@ async def chat_websocket(
                 "user_id": user_id,
             }
         )
+
+        if unread_message_ids:
+            await manager.broadcast(
+                connection_id,
+                {
+                    "type": "read",
+                    "connection_id": connection_id,
+                    "reader_id": user_id,
+                    "message_ids": unread_message_ids,
+                    "read_at": read_time.isoformat(),
+                },
+            )
 
         while True:
             data = await websocket.receive_json()
@@ -425,7 +466,11 @@ async def chat_websocket(
                 continue
 
             with SessionLocal() as db:
-                user = db.get(User, user_id)
+                user = db.get(
+                    User,
+                    user_id,
+                )
+
                 connection = db.get(
                     Connection,
                     connection_id,
@@ -453,6 +498,11 @@ async def chat_websocket(
                     )
                     return
 
+                if connection.user_one_id == user.id:
+                    recipient_id = connection.user_two_id
+                else:
+                    recipient_id = connection.user_one_id
+
                 message = Message(
                     connection_id=connection_id,
                     sender_id=user_id,
@@ -460,6 +510,16 @@ async def chat_websocket(
                 )
 
                 db.add(message)
+                db.flush()
+
+                if manager.is_user_connected(
+                    connection_id,
+                    recipient_id,
+                ):
+                    message.read_at = datetime.now(
+                        timezone.utc
+                    )
+
                 db.commit()
                 db.refresh(message)
 
@@ -469,8 +529,14 @@ async def chat_websocket(
                     "connection_id": message.connection_id,
                     "sender_id": message.sender_id,
                     "content": message.content,
-                    "created_at": message.created_at.isoformat(),
-                    "read_at": None,
+                    "created_at": (
+                        message.created_at.isoformat()
+                    ),
+                    "read_at": (
+                        message.read_at.isoformat()
+                        if message.read_at
+                        else None
+                    ),
                 }
 
             await manager.broadcast(
