@@ -1,5 +1,7 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
@@ -11,6 +13,7 @@ from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_verified_user
 from backend.app.schemas.chat import (
     ChatSummaryResponse,
+    MarkReadResponse,
     MessageCreate,
     MessageResponse,
 )
@@ -106,6 +109,14 @@ def get_chats(
             .limit(1)
         )
 
+        unread_count = db.scalar(
+            select(func.count(Message.id)).where(
+                Message.connection_id == connection.id,
+                Message.sender_id != user.id,
+                Message.read_at.is_(None),
+            )
+        )
+
         chats.append(
             ChatSummaryResponse(
                 connection_id=connection.id,
@@ -127,13 +138,14 @@ def get_chats(
                     if last_message
                     else None
                 ),
+                unread_count=unread_count or 0,
             )
         )
 
     chats.sort(
         key=lambda chat: (
             chat.last_message_at is not None,
-            chat.last_message_at
+            chat.last_message_at,
         ),
         reverse=True,
     )
@@ -178,6 +190,7 @@ def send_message(
         sender_id=message.sender_id,
         content=message.content,
         created_at=message.created_at,
+        read_at=message.read_at,
     )
 
 
@@ -205,6 +218,39 @@ def get_messages(
             sender_id=message.sender_id,
             content=message.content,
             created_at=message.created_at,
+            read_at=message.read_at,
         )
         for message in messages
     ]
+
+
+@router.patch(
+    "/{connection_id}/read",
+    response_model=MarkReadResponse,
+)
+def mark_chat_read(
+    connection_id: int,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    get_user_connection(connection_id, user, db)
+
+    unread_messages = db.scalars(
+        select(Message).where(
+            Message.connection_id == connection_id,
+            Message.sender_id != user.id,
+            Message.read_at.is_(None),
+        )
+    ).all()
+
+    read_time = datetime.now(timezone.utc)
+
+    for message in unread_messages:
+        message.read_at = read_time
+
+    db.commit()
+
+    return MarkReadResponse(
+        connection_id=connection_id,
+        marked_read=len(unread_messages),
+    )

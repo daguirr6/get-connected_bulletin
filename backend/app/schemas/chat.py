@@ -13,6 +13,7 @@ class MessageResponse(BaseModel):
     sender_id: int
     content: str
     created_at: datetime
+    read_at: datetime | None
 
 
 class ChatSummaryResponse(BaseModel):
@@ -23,3 +24,9 @@ class ChatSummaryResponse(BaseModel):
     last_message: str | None
     last_sender_id: int | None
     last_message_at: datetime | None
+    unread_count: int
+
+
+class MarkReadResponse(BaseModel):
+    connection_id: int
+    marked_read: int
