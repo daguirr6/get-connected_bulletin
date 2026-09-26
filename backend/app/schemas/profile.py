@@ -22,6 +22,25 @@ FontStyle = Literal[
 ]
 
 
+class ProfileSongCreate(BaseModel):
+    title: str = Field(
+        min_length=1,
+        max_length=150,
+    )
+
+    artist: str = Field(
+        min_length=1,
+        max_length=150,
+    )
+
+
+class ProfileSongResponse(BaseModel):
+    id: int
+    title: str
+    artist: str
+    position: int
+
+
 class ProfileUpdate(BaseModel):
     about_me: str | None = Field(
         default=None,
@@ -53,6 +72,8 @@ class ProfileResponse(BaseModel):
     background_style: str | None
     font_style: str | None
 
+    songs: list[ProfileSongResponse]
+
     status: str
     admin_note: str | None
 
@@ -73,6 +94,8 @@ class PublicProfileResponse(BaseModel):
 
     background_style: str | None
     font_style: str | None
+
+    songs: list[ProfileSongResponse]
 
 
 class ProfileSubmitResponse(BaseModel):

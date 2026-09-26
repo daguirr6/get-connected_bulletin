@@ -5,17 +5,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
+from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
+from backend.app.models.profile_song import ProfileSong
 from backend.app.models.user import User
+from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_verified_user
 from backend.app.schemas.profile import (
     ProfileResponse,
+    ProfileSongCreate,
+    ProfileSongResponse,
     ProfileSubmitResponse,
     ProfileUpdate,
     PublicProfileResponse,
 )
-from backend.app.models.post_it import PostIt
-from backend.app.models.verification import VerificationRequest
+
 
 router = APIRouter(
     prefix="/profiles",
@@ -23,7 +27,16 @@ router = APIRouter(
 )
 
 
-def make_profile_response(profile: Profile) -> ProfileResponse:
+def make_profile_response(
+    profile: Profile,
+    db: Session,
+) -> ProfileResponse:
+    songs = db.scalars(
+        select(ProfileSong)
+        .where(ProfileSong.profile_id == profile.id)
+        .order_by(ProfileSong.position, ProfileSong.id)
+    ).all()
+
     return ProfileResponse(
         id=profile.id,
         user_id=profile.user_id,
@@ -32,6 +45,15 @@ def make_profile_response(profile: Profile) -> ProfileResponse:
         favorite_quote=profile.favorite_quote,
         background_style=profile.background_style,
         font_style=profile.font_style,
+        songs=[
+            ProfileSongResponse(
+                id=song.id,
+                title=song.title,
+                artist=song.artist,
+                position=song.position,
+            )
+            for song in songs
+        ],
         status=profile.status,
         admin_note=profile.admin_note,
         created_at=profile.created_at,
@@ -61,7 +83,7 @@ def get_my_profile(
             detail="Profile not created yet",
         )
 
-    return make_profile_response(profile)
+    return make_profile_response(profile, db)
 
 
 @router.patch(
@@ -98,7 +120,11 @@ def update_my_profile(
 
         setattr(profile, field, value)
 
-    if profile.status in {"pending", "approved", "needs_changes"}:
+    if profile.status in {
+        "pending",
+        "approved",
+        "needs_changes",
+    }:
         profile.status = "draft"
         profile.submitted_at = None
         profile.reviewed_at = None
@@ -107,7 +133,7 @@ def update_my_profile(
     db.commit()
     db.refresh(profile)
 
-    return make_profile_response(profile)
+    return make_profile_response(profile, db)
 
 
 @router.post(
@@ -130,6 +156,12 @@ def submit_my_profile(
             detail="Create your profile before submitting it",
         )
 
+    songs = db.scalars(
+        select(ProfileSong).where(
+            ProfileSong.profile_id == profile.id
+        )
+    ).all()
+
     has_content = any(
         [
             profile.about_me,
@@ -137,6 +169,7 @@ def submit_my_profile(
             profile.favorite_quote,
             profile.background_style,
             profile.font_style,
+            songs,
         ]
     )
 
@@ -157,6 +190,116 @@ def submit_my_profile(
         status="pending",
         message="Your profile was submitted for review",
     )
+
+
+@router.post(
+    "/me/songs",
+    response_model=ProfileSongResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_profile_song(
+    data: ProfileSongCreate,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Create your profile first",
+        )
+
+    songs = db.scalars(
+        select(ProfileSong).where(
+            ProfileSong.profile_id == profile.id
+        )
+    ).all()
+
+    if len(songs) >= 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Profiles can have up to 10 songs",
+        )
+
+    next_position = max(
+        (song.position for song in songs),
+        default=-1,
+    ) + 1
+
+    song = ProfileSong(
+        profile_id=profile.id,
+        title=data.title.strip(),
+        artist=data.artist.strip(),
+        position=next_position,
+    )
+
+    db.add(song)
+
+    if profile.status != "draft":
+        profile.status = "draft"
+        profile.submitted_at = None
+        profile.reviewed_at = None
+        profile.admin_note = None
+
+    db.commit()
+    db.refresh(song)
+
+    return ProfileSongResponse(
+        id=song.id,
+        title=song.title,
+        artist=song.artist,
+        position=song.position,
+    )
+
+
+@router.delete(
+    "/me/songs/{song_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_profile_song(
+    song_id: int,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found",
+        )
+
+    song = db.scalar(
+        select(ProfileSong).where(
+            ProfileSong.id == song_id,
+            ProfileSong.profile_id == profile.id,
+        )
+    )
+
+    if song is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Song not found",
+        )
+
+    db.delete(song)
+
+    if profile.status != "draft":
+        profile.status = "draft"
+        profile.submitted_at = None
+        profile.reviewed_at = None
+        profile.admin_note = None
+
+    db.commit()
 
 
 @router.get(
@@ -210,6 +353,12 @@ def get_public_profile(
             detail="Profile information not found",
         )
 
+    songs = db.scalars(
+        select(ProfileSong)
+        .where(ProfileSong.profile_id == profile.id)
+        .order_by(ProfileSong.position, ProfileSong.id)
+    ).all()
+
     return PublicProfileResponse(
         user_id=profile.user_id,
         display_name=post_it.display_name,
@@ -219,4 +368,13 @@ def get_public_profile(
         favorite_quote=profile.favorite_quote,
         background_style=profile.background_style,
         font_style=profile.font_style,
+        songs=[
+            ProfileSongResponse(
+                id=song.id,
+                title=song.title,
+                artist=song.artist,
+                position=song.position,
+            )
+            for song in songs
+        ],
     )

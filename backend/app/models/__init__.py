@@ -5,3 +5,4 @@ from backend.app.models.post_it import PostIt
 from backend.app.models.connection import Connection
 from backend.app.models.message import Message
 from backend.app.models.profile import Profile
+from backend.app.models.profile_song import ProfileSong
