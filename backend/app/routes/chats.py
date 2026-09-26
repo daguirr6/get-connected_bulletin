@@ -1,13 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.connection import Connection
 from backend.app.models.message import Message
+from backend.app.models.post_it import PostIt
 from backend.app.models.user import User
+from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_verified_user
-from backend.app.schemas.chat import MessageCreate, MessageResponse
+from backend.app.schemas.chat import (
+    ChatSummaryResponse,
+    MessageCreate,
+    MessageResponse,
+)
 
 
 router = APIRouter(
@@ -41,6 +47,98 @@ def get_user_connection(
         )
 
     return connection
+
+
+@router.get(
+    "",
+    response_model=list[ChatSummaryResponse],
+)
+def get_chats(
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    connections = db.scalars(
+        select(Connection).where(
+            or_(
+                Connection.user_one_id == user.id,
+                Connection.user_two_id == user.id,
+            )
+        )
+    ).all()
+
+    chats = []
+
+    for connection in connections:
+        if connection.user_one_id == user.id:
+            other_user_id = connection.user_two_id
+        else:
+            other_user_id = connection.user_one_id
+
+        other_user = db.get(User, other_user_id)
+
+        if other_user is None:
+            continue
+
+        if other_user.verification_status != "verified":
+            continue
+
+        post_it = db.scalar(
+            select(PostIt).where(
+                PostIt.user_id == other_user_id
+            )
+        )
+
+        verification = db.scalar(
+            select(VerificationRequest).where(
+                VerificationRequest.user_id == other_user_id
+            )
+        )
+
+        if post_it is None or verification is None:
+            continue
+
+        last_message = db.scalar(
+            select(Message)
+            .where(
+                Message.connection_id == connection.id
+            )
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+
+        chats.append(
+            ChatSummaryResponse(
+                connection_id=connection.id,
+                user_id=other_user_id,
+                display_name=post_it.display_name,
+                major=verification.major,
+                last_message=(
+                    last_message.content
+                    if last_message
+                    else None
+                ),
+                last_sender_id=(
+                    last_message.sender_id
+                    if last_message
+                    else None
+                ),
+                last_message_at=(
+                    last_message.created_at
+                    if last_message
+                    else None
+                ),
+            )
+        )
+
+    chats.sort(
+        key=lambda chat: (
+            chat.last_message_at is not None,
+            chat.last_message_at
+        ),
+        reverse=True,
+    )
+
+    return chats
 
 
 @router.post(

@@ -13,3 +13,13 @@ class MessageResponse(BaseModel):
     sender_id: int
     content: str
     created_at: datetime
+
+
+class ChatSummaryResponse(BaseModel):
+    connection_id: int
+    user_id: int
+    display_name: str
+    major: str
+    last_message: str | None
+    last_sender_id: int | None
+    last_message_at: datetime | None
