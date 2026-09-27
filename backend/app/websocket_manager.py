@@ -56,6 +56,37 @@ class ConnectionManager:
             for active_user_id, _ in sockets
         )
 
+    async def send_to_user(
+        self,
+        connection_id: int,
+        user_id: int,
+        data: dict,
+    ):
+        sockets = self.active_connections.get(
+            connection_id,
+            [],
+        )
+
+        disconnected = []
+
+        for active_user_id, websocket in sockets:
+            if active_user_id != user_id:
+                continue
+
+            try:
+                await websocket.send_json(data)
+            except Exception:
+                disconnected.append(
+                    (active_user_id, websocket)
+                )
+
+        for active_user_id, websocket in disconnected:
+            self.disconnect(
+                connection_id,
+                active_user_id,
+                websocket,
+            )
+
     async def broadcast(
         self,
         connection_id: int,

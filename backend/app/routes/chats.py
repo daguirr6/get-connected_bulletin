@@ -12,9 +12,8 @@ from fastapi import (
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from backend.app.blocking import has_blocked
 from backend.app.database import SessionLocal, get_db
-from backend.app.security import decode_access_token
-from backend.app.websocket_manager import manager
 from backend.app.models.connection import Connection
 from backend.app.models.message import Message
 from backend.app.models.post_it import PostIt
@@ -27,6 +26,8 @@ from backend.app.schemas.chat import (
     MessageCreate,
     MessageResponse,
 )
+from backend.app.security import decode_access_token
+from backend.app.websocket_manager import manager
 
 
 router = APIRouter(
@@ -40,7 +41,10 @@ def get_user_connection(
     user: User,
     db: Session,
 ):
-    connection = db.get(Connection, connection_id)
+    connection = db.get(
+        Connection,
+        connection_id,
+    )
 
     if connection is None:
         raise HTTPException(
@@ -60,6 +64,16 @@ def get_user_connection(
         )
 
     return connection
+
+
+def get_other_user_id(
+    connection: Connection,
+    user_id: int,
+) -> int:
+    if connection.user_one_id == user_id:
+        return connection.user_two_id
+
+    return connection.user_one_id
 
 
 @router.get(
@@ -82,12 +96,15 @@ def get_chats(
     chats = []
 
     for connection in connections:
-        if connection.user_one_id == user.id:
-            other_user_id = connection.user_two_id
-        else:
-            other_user_id = connection.user_one_id
+        other_user_id = get_other_user_id(
+            connection,
+            user.id,
+        )
 
-        other_user = db.get(User, other_user_id)
+        other_user = db.get(
+            User,
+            other_user_id,
+        )
 
         if other_user is None:
             continue
@@ -103,7 +120,8 @@ def get_chats(
 
         verification = db.scalar(
             select(VerificationRequest).where(
-                VerificationRequest.user_id == other_user_id
+                VerificationRequest.user_id
+                == other_user_id
             )
         )
 
@@ -113,16 +131,27 @@ def get_chats(
         last_message = db.scalar(
             select(Message)
             .where(
-                Message.connection_id == connection.id
+                Message.connection_id
+                == connection.id,
+                or_(
+                    Message.recipient_visible.is_(True),
+                    Message.sender_id == user.id,
+                ),
             )
-            .order_by(Message.created_at.desc())
+            .order_by(
+                Message.created_at.desc()
+            )
             .limit(1)
         )
 
         unread_count = db.scalar(
-            select(func.count(Message.id)).where(
-                Message.connection_id == connection.id,
+            select(
+                func.count(Message.id)
+            ).where(
+                Message.connection_id
+                == connection.id,
                 Message.sender_id != user.id,
+                Message.recipient_visible.is_(True),
                 Message.read_at.is_(None),
             )
         )
@@ -174,7 +203,32 @@ def send_message(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
-    get_user_connection(connection_id, user, db)
+    connection = get_user_connection(
+        connection_id,
+        user,
+        db,
+    )
+
+    recipient_id = get_other_user_id(
+        connection,
+        user.id,
+    )
+
+    if has_blocked(
+        db,
+        user.id,
+        recipient_id,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unblock this user before messaging them",
+        )
+
+    recipient_blocked_sender = has_blocked(
+        db,
+        recipient_id,
+        user.id,
+    )
 
     content = data.content.strip()
 
@@ -188,6 +242,9 @@ def send_message(
         connection_id=connection_id,
         sender_id=user.id,
         content=content,
+        recipient_visible=(
+            not recipient_blocked_sender
+        ),
     )
 
     db.add(message)
@@ -213,12 +270,25 @@ def get_messages(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
-    get_user_connection(connection_id, user, db)
+    get_user_connection(
+        connection_id,
+        user,
+        db,
+    )
 
     messages = db.scalars(
         select(Message)
-        .where(Message.connection_id == connection_id)
-        .order_by(Message.created_at)
+        .where(
+            Message.connection_id
+            == connection_id,
+            or_(
+                Message.recipient_visible.is_(True),
+                Message.sender_id == user.id,
+            ),
+        )
+        .order_by(
+            Message.created_at
+        )
     ).all()
 
     return [
@@ -243,17 +313,25 @@ def mark_chat_read(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
-    get_user_connection(connection_id, user, db)
+    get_user_connection(
+        connection_id,
+        user,
+        db,
+    )
 
     unread_messages = db.scalars(
         select(Message).where(
-            Message.connection_id == connection_id,
+            Message.connection_id
+            == connection_id,
             Message.sender_id != user.id,
+            Message.recipient_visible.is_(True),
             Message.read_at.is_(None),
         )
     ).all()
 
-    read_time = datetime.now(timezone.utc)
+    read_time = datetime.now(
+        timezone.utc
+    )
 
     for message in unread_messages:
         message.read_at = read_time
@@ -265,7 +343,10 @@ def mark_chat_read(
         marked_read=len(unread_messages),
     )
 
-@router.websocket("/{connection_id}/ws")
+
+@router.websocket(
+    "/{connection_id}/ws"
+)
 async def chat_websocket(
     websocket: WebSocket,
     connection_id: int,
@@ -287,7 +368,10 @@ async def chat_websocket(
             )
             return
 
-        if not isinstance(auth_data, dict):
+        if not isinstance(
+            auth_data,
+            dict,
+        ):
             await websocket.close(
                 code=1008,
                 reason="Invalid authentication",
@@ -310,7 +394,9 @@ async def chat_websocket(
             )
             return
 
-        decoded_user_id = decode_access_token(token)
+        decoded_user_id = decode_access_token(
+            token
+        )
 
         if decoded_user_id is None:
             await websocket.close(
@@ -340,7 +426,10 @@ async def chat_websocket(
                 )
                 return
 
-            if user.verification_status != "verified":
+            if (
+                user.verification_status
+                != "verified"
+            ):
                 await websocket.close(
                     code=1008,
                     reason="Account is not verified",
@@ -355,14 +444,19 @@ async def chat_websocket(
                 return
 
             belongs_to_user = (
-                connection.user_one_id == user.id
-                or connection.user_two_id == user.id
+                connection.user_one_id
+                == user.id
+                or connection.user_two_id
+                == user.id
             )
 
             if not belongs_to_user:
                 await websocket.close(
                     code=1008,
-                    reason="You do not have access to this chat",
+                    reason=(
+                        "You do not have "
+                        "access to this chat"
+                    ),
                 )
                 return
 
@@ -370,17 +464,25 @@ async def chat_websocket(
 
             unread_messages = db.scalars(
                 select(Message).where(
-                    Message.connection_id == connection_id,
-                    Message.sender_id != user.id,
+                    Message.connection_id
+                    == connection_id,
+                    Message.sender_id
+                    != user.id,
+                    Message.recipient_visible.is_(
+                        True
+                    ),
                     Message.read_at.is_(None),
                 )
             ).all()
 
             if unread_messages:
-                read_time = datetime.now(timezone.utc)
+                read_time = datetime.now(
+                    timezone.utc
+                )
 
                 for message in unread_messages:
                     message.read_at = read_time
+
                     unread_message_ids.append(
                         message.id
                     )
@@ -408,15 +510,24 @@ async def chat_websocket(
                     "type": "read",
                     "connection_id": connection_id,
                     "reader_id": user_id,
-                    "message_ids": unread_message_ids,
-                    "read_at": read_time.isoformat(),
+                    "message_ids": (
+                        unread_message_ids
+                    ),
+                    "read_at": (
+                        read_time.isoformat()
+                    ),
                 },
             )
 
         while True:
-            data = await websocket.receive_json()
+            data = (
+                await websocket.receive_json()
+            )
 
-            if not isinstance(data, dict):
+            if not isinstance(
+                data,
+                dict,
+            ):
                 await websocket.send_json(
                     {
                         "type": "error",
@@ -429,18 +540,28 @@ async def chat_websocket(
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Unknown message type",
+                        "message": (
+                            "Unknown message type"
+                        ),
                     }
                 )
                 continue
 
-            content = data.get("content")
+            content = data.get(
+                "content"
+            )
 
-            if not isinstance(content, str):
+            if not isinstance(
+                content,
+                str,
+            ):
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Message content is required",
+                        "message": (
+                            "Message content "
+                            "is required"
+                        ),
                     }
                 )
                 continue
@@ -451,7 +572,10 @@ async def chat_websocket(
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Message cannot be empty",
+                        "message": (
+                            "Message cannot "
+                            "be empty"
+                        ),
                     }
                 )
                 continue
@@ -460,10 +584,14 @@ async def chat_websocket(
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Message is too long",
+                        "message": (
+                            "Message is too long"
+                        ),
                     }
                 )
                 continue
+
+            should_only_echo_to_sender = False
 
             with SessionLocal() as db:
                 user = db.get(
@@ -476,7 +604,10 @@ async def chat_websocket(
                     connection_id,
                 )
 
-                if user is None or connection is None:
+                if (
+                    user is None
+                    or connection is None
+                ):
                     await websocket.close(
                         code=1008,
                         reason="Chat access ended",
@@ -484,12 +615,15 @@ async def chat_websocket(
                     return
 
                 belongs_to_user = (
-                    connection.user_one_id == user.id
-                    or connection.user_two_id == user.id
+                    connection.user_one_id
+                    == user.id
+                    or connection.user_two_id
+                    == user.id
                 )
 
                 if (
-                    user.verification_status != "verified"
+                    user.verification_status
+                    != "verified"
                     or not belongs_to_user
                 ):
                     await websocket.close(
@@ -498,23 +632,53 @@ async def chat_websocket(
                     )
                     return
 
-                if connection.user_one_id == user.id:
-                    recipient_id = connection.user_two_id
-                else:
-                    recipient_id = connection.user_one_id
+                recipient_id = get_other_user_id(
+                    connection,
+                    user.id,
+                )
+
+                if has_blocked(
+                    db,
+                    user.id,
+                    recipient_id,
+                ):
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": (
+                                "Unblock this user "
+                                "before messaging them"
+                            ),
+                        }
+                    )
+                    continue
+
+                recipient_blocked_sender = (
+                    has_blocked(
+                        db,
+                        recipient_id,
+                        user.id,
+                    )
+                )
 
                 message = Message(
                     connection_id=connection_id,
                     sender_id=user_id,
                     content=content,
+                    recipient_visible=(
+                        not recipient_blocked_sender
+                    ),
                 )
 
                 db.add(message)
                 db.flush()
 
-                if manager.is_user_connected(
-                    connection_id,
-                    recipient_id,
+                if (
+                    not recipient_blocked_sender
+                    and manager.is_user_connected(
+                        connection_id,
+                        recipient_id,
+                    )
                 ):
                     message.read_at = datetime.now(
                         timezone.utc
@@ -526,11 +690,16 @@ async def chat_websocket(
                 message_data = {
                     "type": "message",
                     "id": message.id,
-                    "connection_id": message.connection_id,
-                    "sender_id": message.sender_id,
+                    "connection_id": (
+                        message.connection_id
+                    ),
+                    "sender_id": (
+                        message.sender_id
+                    ),
                     "content": message.content,
                     "created_at": (
-                        message.created_at.isoformat()
+                        message.created_at
+                        .isoformat()
                     ),
                     "read_at": (
                         message.read_at.isoformat()
@@ -539,10 +708,21 @@ async def chat_websocket(
                     ),
                 }
 
-            await manager.broadcast(
-                connection_id,
-                message_data,
-            )
+                should_only_echo_to_sender = (
+                    recipient_blocked_sender
+                )
+
+            if should_only_echo_to_sender:
+                await manager.send_to_user(
+                    connection_id,
+                    user_id,
+                    message_data,
+                )
+            else:
+                await manager.broadcast(
+                    connection_id,
+                    message_data,
+                )
 
     except WebSocketDisconnect:
         pass
