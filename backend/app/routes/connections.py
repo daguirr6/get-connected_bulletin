@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
 from backend.app.models.connection import Connection
 from backend.app.models.post_it import PostIt
@@ -31,7 +32,9 @@ def create_connection(
     db: Session = Depends(get_db),
 ):
     my_post_it = db.scalar(
-        select(PostIt).where(PostIt.user_id == user.id)
+        select(PostIt).where(
+            PostIt.user_id == user.id
+        )
     )
 
     if my_post_it is None:
@@ -46,16 +49,35 @@ def create_connection(
             detail="You cannot connect with yourself",
         )
 
-    target_user = db.get(User, target_user_id)
+    target_user = db.get(
+        User,
+        target_user_id,
+    )
 
-    if target_user is None or target_user.verification_status != "verified":
+    if (
+        target_user is None
+        or target_user.verification_status != "verified"
+        or target_user.account_status != "active"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if users_are_blocked(
+        db,
+        user.id,
+        target_user_id,
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
 
     target_post_it = db.scalar(
-        select(PostIt).where(PostIt.user_id == target_user_id)
+        select(PostIt).where(
+            PostIt.user_id == target_user_id
+        )
     )
 
     if target_post_it is None:
@@ -64,8 +86,15 @@ def create_connection(
             detail="User does not have a Post-it",
         )
 
-    user_one_id = min(user.id, target_user_id)
-    user_two_id = max(user.id, target_user_id)
+    user_one_id = min(
+        user.id,
+        target_user_id,
+    )
+
+    user_two_id = max(
+        user.id,
+        target_user_id,
+    )
 
     existing_connection = db.scalar(
         select(Connection).where(
@@ -126,7 +155,9 @@ def get_connections(
                 Connection.user_two_id == user.id,
             )
         )
-        .order_by(Connection.created_at.desc())
+        .order_by(
+            Connection.created_at.desc()
+        )
     ).all()
 
     results = []
@@ -138,7 +169,9 @@ def get_connections(
             other_user_id = connection.user_one_id
 
         post_it = db.scalar(
-            select(PostIt).where(PostIt.user_id == other_user_id)
+            select(PostIt).where(
+                PostIt.user_id == other_user_id
+            )
         )
 
         verification = db.scalar(
@@ -147,7 +180,10 @@ def get_connections(
             )
         )
 
-        if post_it is None or verification is None:
+        if (
+            post_it is None
+            or verification is None
+        ):
             continue
 
         results.append(
@@ -172,7 +208,9 @@ def get_connection_suggestions(
     db: Session = Depends(get_db),
 ):
     my_post_it = db.scalar(
-        select(PostIt).where(PostIt.user_id == user.id)
+        select(PostIt).where(
+            PostIt.user_id == user.id
+        )
     )
 
     if my_post_it is None:
@@ -194,9 +232,20 @@ def get_connection_suggestions(
 
     for connection in my_connections:
         if connection.user_one_id == user.id:
-            direct_ids.add(connection.user_two_id)
+            direct_id = connection.user_two_id
         else:
-            direct_ids.add(connection.user_one_id)
+            direct_id = connection.user_one_id
+
+        if users_are_blocked(
+            db,
+            user.id,
+            direct_id,
+        ):
+            continue
+
+        direct_ids.add(
+            direct_id
+        )
 
     mutuals = {}
 
@@ -222,24 +271,48 @@ def get_connection_suggestions(
             if candidate_id in direct_ids:
                 continue
 
+            if users_are_blocked(
+                db,
+                user.id,
+                candidate_id,
+            ):
+                continue
+
             if candidate_id not in mutuals:
                 mutuals[candidate_id] = []
 
-            mutuals[candidate_id].append(direct_id)
+            mutuals[candidate_id].append(
+                direct_id
+            )
 
     suggestions = []
 
     for candidate_id, mutual_ids in mutuals.items():
-        candidate = db.get(User, candidate_id)
+        if users_are_blocked(
+            db,
+            user.id,
+            candidate_id,
+        ):
+            continue
+
+        candidate = db.get(
+            User,
+            candidate_id,
+        )
 
         if candidate is None:
             continue
 
-        if candidate.verification_status != "verified":
+        if (
+            candidate.verification_status != "verified"
+            or candidate.account_status != "active"
+        ):
             continue
 
         candidate_post_it = db.scalar(
-            select(PostIt).where(PostIt.user_id == candidate_id)
+            select(PostIt).where(
+                PostIt.user_id == candidate_id
+            )
         )
 
         if candidate_post_it is None:
@@ -258,11 +331,15 @@ def get_connection_suggestions(
 
         for mutual_id in mutual_ids:
             mutual_post_it = db.scalar(
-                select(PostIt).where(PostIt.user_id == mutual_id)
+                select(PostIt).where(
+                    PostIt.user_id == mutual_id
+                )
             )
 
             if mutual_post_it is not None:
-                mutual_names.append(mutual_post_it.display_name)
+                mutual_names.append(
+                    mutual_post_it.display_name
+                )
 
         suggestions.append(
             ConnectionSuggestionResponse(

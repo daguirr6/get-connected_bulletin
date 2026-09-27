@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
 from backend.app.models.post_it import PostIt
 from backend.app.models.user import User
@@ -31,7 +32,9 @@ def create_post_it(
     db: Session = Depends(get_db),
 ):
     existing_post = db.scalar(
-        select(PostIt).where(PostIt.user_id == user.id)
+        select(PostIt).where(
+            PostIt.user_id == user.id
+        )
     )
 
     if existing_post:
@@ -57,7 +60,11 @@ def create_post_it(
         display_name=data.display_name.strip(),
         fun_facts=data.fun_facts.strip(),
         song_title=data.song_title.strip(),
-        song_artist=data.song_artist.strip() if data.song_artist else None,
+        song_artist=(
+            data.song_artist.strip()
+            if data.song_artist
+            else None
+        ),
     )
 
     db.add(post_it)
@@ -85,18 +92,46 @@ def get_post_its(
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
-        select(PostIt, VerificationRequest.major)
+        select(
+            PostIt,
+            VerificationRequest.major,
+        )
         .join(
             VerificationRequest,
             VerificationRequest.user_id == PostIt.user_id,
         )
-        .where(VerificationRequest.status == "verified")
-        .order_by(PostIt.created_at.desc())
+        .where(
+            VerificationRequest.status == "verified"
+        )
+        .order_by(
+            PostIt.created_at.desc()
+        )
     ).all()
 
     post_its = []
 
     for post_it, major in rows:
+        if (
+            post_it.user_id != user.id
+            and users_are_blocked(
+                db,
+                user.id,
+                post_it.user_id,
+            )
+        ):
+            continue
+
+        post_user = db.get(
+            User,
+            post_it.user_id,
+        )
+
+        if (
+            post_user is None
+            or post_user.account_status != "active"
+        ):
+            continue
+
         post_its.append(
             PostItResponse(
                 id=post_it.id,
@@ -122,7 +157,10 @@ def get_my_post_it(
     db: Session = Depends(get_db),
 ):
     row = db.execute(
-        select(PostIt, VerificationRequest.major)
+        select(
+            PostIt,
+            VerificationRequest.major,
+        )
         .join(
             VerificationRequest,
             VerificationRequest.user_id == PostIt.user_id,
@@ -163,7 +201,9 @@ def update_my_post_it(
     db: Session = Depends(get_db),
 ):
     post_it = db.scalar(
-        select(PostIt).where(PostIt.user_id == user.id)
+        select(PostIt).where(
+            PostIt.user_id == user.id
+        )
     )
 
     if post_it is None:
@@ -184,10 +224,14 @@ def update_my_post_it(
             detail="Verification record not found",
         )
 
-    updates = data.model_dump(exclude_unset=True)
+    updates = data.model_dump(
+        exclude_unset=True
+    )
 
     if "display_name" in updates:
-        display_name = updates["display_name"].strip()
+        display_name = updates[
+            "display_name"
+        ].strip()
 
         if not display_name:
             raise HTTPException(
@@ -198,7 +242,9 @@ def update_my_post_it(
         post_it.display_name = display_name
 
     if "fun_facts" in updates:
-        fun_facts = updates["fun_facts"].strip()
+        fun_facts = updates[
+            "fun_facts"
+        ].strip()
 
         if not fun_facts:
             raise HTTPException(
@@ -209,7 +255,9 @@ def update_my_post_it(
         post_it.fun_facts = fun_facts
 
     if "song_title" in updates:
-        song_title = updates["song_title"].strip()
+        song_title = updates[
+            "song_title"
+        ].strip()
 
         if not song_title:
             raise HTTPException(
@@ -220,13 +268,18 @@ def update_my_post_it(
         post_it.song_title = song_title
 
     if "song_artist" in updates:
-        song_artist = updates["song_artist"]
+        song_artist = updates[
+            "song_artist"
+        ]
 
         if song_artist is None:
             post_it.song_artist = None
+
         else:
             song_artist = song_artist.strip()
-            post_it.song_artist = song_artist or None
+            post_it.song_artist = (
+                song_artist or None
+            )
 
     db.commit()
     db.refresh(post_it)

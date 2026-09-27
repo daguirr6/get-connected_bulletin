@@ -15,6 +15,7 @@ from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
 from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
@@ -550,6 +551,18 @@ def get_public_profile(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
+    if (
+        user_id != user.id
+        and users_are_blocked(
+            db,
+            user.id,
+            user_id,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found",
+        )
     target_user = db.get(
         User,
         user_id,

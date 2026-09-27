@@ -17,3 +17,22 @@ def has_blocked(
     )
 
     return block_id is not None
+
+
+def users_are_blocked(
+    db: Session,
+    user_a_id: int,
+    user_b_id: int,
+) -> bool:
+    return (
+        has_blocked(
+            db,
+            user_a_id,
+            user_b_id,
+        )
+        or has_blocked(
+            db,
+            user_b_id,
+            user_a_id,
+        )
+    )

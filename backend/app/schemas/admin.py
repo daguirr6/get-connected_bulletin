@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.profile import ProfileSongResponse
+
 
 class PendingVerificationResponse(BaseModel):
     id: int
@@ -15,7 +17,10 @@ class PendingVerificationResponse(BaseModel):
 
 class VerificationUpdateRequest(BaseModel):
     status: Literal["verified", "needs_info"]
-    admin_note: str | None = Field(default=None, max_length=500)
+    admin_note: str | None = Field(
+        default=None,
+        max_length=500,
+    )
 
 
 class VerificationUpdateResponse(BaseModel):
@@ -32,16 +37,27 @@ class PendingProfileResponse(BaseModel):
     about_me: str | None
     interests: str | None
     favorite_quote: str | None
+
     background_style: str | None
     font_style: str | None
+    profile_picture_url: str | None
+
+    songs: list[ProfileSongResponse]
 
     status: str
     submitted_at: datetime | None
 
 
 class ProfileReviewRequest(BaseModel):
-    status: Literal["approved", "needs_changes"]
-    admin_note: str | None = Field(default=None, max_length=1000)
+    status: Literal[
+        "approved",
+        "needs_changes",
+    ]
+
+    admin_note: str | None = Field(
+        default=None,
+        max_length=1000,
+    )
 
 
 class ProfileReviewResponse(BaseModel):
