@@ -1,6 +1,17 @@
 from datetime import datetime, timezone
+from io import BytesIO
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -27,14 +38,46 @@ router = APIRouter(
 )
 
 
+PROFILE_PICTURE_DIR = (
+    Path(__file__).resolve().parent.parent.parent
+    / "uploads"
+    / "profile_pictures"
+)
+
+PROFILE_PICTURE_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+MAX_PROFILE_PICTURE_SIZE = 5 * 1024 * 1024
+MAX_PROFILE_PICTURE_DIMENSION = 5000
+
+
+def get_profile_picture_url(
+    profile: Profile,
+) -> str | None:
+    if not profile.profile_picture:
+        return None
+
+    return (
+        "/uploads/profile_pictures/"
+        f"{profile.profile_picture}"
+    )
+
+
 def make_profile_response(
     profile: Profile,
     db: Session,
 ) -> ProfileResponse:
     songs = db.scalars(
         select(ProfileSong)
-        .where(ProfileSong.profile_id == profile.id)
-        .order_by(ProfileSong.position, ProfileSong.id)
+        .where(
+            ProfileSong.profile_id == profile.id
+        )
+        .order_by(
+            ProfileSong.position,
+            ProfileSong.id,
+        )
     ).all()
 
     return ProfileResponse(
@@ -45,6 +88,9 @@ def make_profile_response(
         favorite_quote=profile.favorite_quote,
         background_style=profile.background_style,
         font_style=profile.font_style,
+        profile_picture_url=get_profile_picture_url(
+            profile
+        ),
         songs=[
             ProfileSongResponse(
                 id=song.id,
@@ -83,7 +129,10 @@ def get_my_profile(
             detail="Profile not created yet",
         )
 
-    return make_profile_response(profile, db)
+    return make_profile_response(
+        profile,
+        db,
+    )
 
 
 @router.patch(
@@ -109,7 +158,9 @@ def update_my_profile(
 
         db.add(profile)
 
-    updates = data.model_dump(exclude_unset=True)
+    updates = data.model_dump(
+        exclude_unset=True
+    )
 
     for field, value in updates.items():
         if isinstance(value, str):
@@ -118,7 +169,11 @@ def update_my_profile(
             if not value:
                 value = None
 
-        setattr(profile, field, value)
+        setattr(
+            profile,
+            field,
+            value,
+        )
 
     if profile.status in {
         "pending",
@@ -133,7 +188,10 @@ def update_my_profile(
     db.commit()
     db.refresh(profile)
 
-    return make_profile_response(profile, db)
+    return make_profile_response(
+        profile,
+        db,
+    )
 
 
 @router.post(
@@ -169,6 +227,7 @@ def submit_my_profile(
             profile.favorite_quote,
             profile.background_style,
             profile.font_style,
+            profile.profile_picture,
             songs,
         ]
     )
@@ -180,7 +239,9 @@ def submit_my_profile(
         )
 
     profile.status = "pending"
-    profile.submitted_at = datetime.now(timezone.utc)
+    profile.submitted_at = datetime.now(
+        timezone.utc
+    )
     profile.reviewed_at = None
     profile.admin_note = None
 
@@ -227,7 +288,10 @@ def add_profile_song(
         )
 
     next_position = max(
-        (song.position for song in songs),
+        (
+            song.position
+            for song in songs
+        ),
         default=-1,
     ) + 1
 
@@ -302,6 +366,181 @@ def delete_profile_song(
     db.commit()
 
 
+@router.post(
+    "/me/picture",
+    response_model=ProfileResponse,
+)
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Create your profile first",
+        )
+
+    allowed_types = {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Profile picture must be a "
+                "JPEG, PNG, or WebP image"
+            ),
+        )
+
+    contents = await file.read(
+        MAX_PROFILE_PICTURE_SIZE + 1
+    )
+
+    if len(contents) > MAX_PROFILE_PICTURE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Profile picture must be "
+                "5 MB or smaller"
+            ),
+        )
+
+    try:
+        image = Image.open(
+            BytesIO(contents)
+        )
+
+        image.verify()
+
+        image = Image.open(
+            BytesIO(contents)
+        )
+
+        if (
+            image.width > MAX_PROFILE_PICTURE_DIMENSION
+            or image.height > MAX_PROFILE_PICTURE_DIMENSION
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Profile picture dimensions are too large",
+            )
+
+        if image.mode not in (
+            "RGB",
+            "RGBA",
+        ):
+            image = image.convert(
+                "RGBA"
+            )
+
+        image.thumbnail(
+            (1000, 1000)
+        )
+
+    except (
+        UnidentifiedImageError,
+        OSError,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is not a valid image",
+        )
+
+    filename = (
+        f"{uuid4().hex}.webp"
+    )
+
+    picture_path = (
+        PROFILE_PICTURE_DIR
+        / filename
+    )
+
+    image.save(
+        picture_path,
+        format="WEBP",
+        quality=85,
+    )
+
+    old_filename = profile.profile_picture
+
+    profile.profile_picture = filename
+
+    if profile.status != "draft":
+        profile.status = "draft"
+        profile.submitted_at = None
+        profile.reviewed_at = None
+        profile.admin_note = None
+
+    db.commit()
+    db.refresh(profile)
+
+    if old_filename:
+        old_path = (
+            PROFILE_PICTURE_DIR
+            / old_filename
+        )
+
+        if old_path.exists():
+            old_path.unlink()
+
+    return make_profile_response(
+        profile,
+        db,
+    )
+
+
+@router.delete(
+    "/me/picture",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_profile_picture(
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if (
+        profile is None
+        or not profile.profile_picture
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile picture not found",
+        )
+
+    picture_path = (
+        PROFILE_PICTURE_DIR
+        / profile.profile_picture
+    )
+
+    profile.profile_picture = None
+
+    if profile.status != "draft":
+        profile.status = "draft"
+        profile.submitted_at = None
+        profile.reviewed_at = None
+        profile.admin_note = None
+
+    db.commit()
+
+    if picture_path.exists():
+        picture_path.unlink()
+
+
 @router.get(
     "/{user_id}",
     response_model=PublicProfileResponse,
@@ -311,7 +550,10 @@ def get_public_profile(
     user: User = Depends(require_verified_user),
     db: Session = Depends(get_db),
 ):
-    target_user = db.get(User, user_id)
+    target_user = db.get(
+        User,
+        user_id,
+    )
 
     if (
         target_user is None
@@ -347,7 +589,10 @@ def get_public_profile(
         )
     )
 
-    if post_it is None or verification is None:
+    if (
+        post_it is None
+        or verification is None
+    ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile information not found",
@@ -355,8 +600,13 @@ def get_public_profile(
 
     songs = db.scalars(
         select(ProfileSong)
-        .where(ProfileSong.profile_id == profile.id)
-        .order_by(ProfileSong.position, ProfileSong.id)
+        .where(
+            ProfileSong.profile_id == profile.id
+        )
+        .order_by(
+            ProfileSong.position,
+            ProfileSong.id,
+        )
     ).all()
 
     return PublicProfileResponse(
@@ -368,6 +618,9 @@ def get_public_profile(
         favorite_quote=profile.favorite_quote,
         background_style=profile.background_style,
         font_style=profile.font_style,
+        profile_picture_url=get_profile_picture_url(
+            profile
+        ),
         songs=[
             ProfileSongResponse(
                 id=song.id,

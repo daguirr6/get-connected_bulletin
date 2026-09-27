@@ -93,3 +93,6 @@ cmake_install.cmake
 *.elf
 *.hex
 *.map
+
+# User uploaded files
+backend/uploads/profile_pictures/*

@@ -71,6 +71,7 @@ class ProfileResponse(BaseModel):
 
     background_style: str | None
     font_style: str | None
+    profile_picture_url: str | None
 
     songs: list[ProfileSongResponse]
 
@@ -94,6 +95,7 @@ class PublicProfileResponse(BaseModel):
 
     background_style: str | None
     font_style: str | None
+    profile_picture_url: str | None
 
     songs: list[ProfileSongResponse]
 

@@ -9,10 +9,15 @@ from backend.app.models.base import Base
 class Profile(Base):
     __tablename__ = "profiles"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
         unique=True,
         nullable=False,
     )
@@ -39,6 +44,11 @@ class Profile(Base):
 
     font_style: Mapped[str | None] = mapped_column(
         String(100),
+        nullable=True,
+    )
+
+    profile_picture: Mapped[str | None] = mapped_column(
+        String(255),
         nullable=True,
     )
 
