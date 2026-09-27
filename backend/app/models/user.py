@@ -38,6 +38,13 @@ class User(Base):
         nullable=False,
     )
 
+    account_status: Mapped[str] = mapped_column(
+    String(20),
+    default="active",
+    server_default="active",
+    nullable=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

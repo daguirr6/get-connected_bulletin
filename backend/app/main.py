@@ -11,6 +11,8 @@ from backend.app.routes.chats import router as chat_router
 from backend.app.routes.connections import router as connection_router
 from backend.app.routes.post_its import router as post_it_router
 from backend.app.routes.profiles import router as profile_router
+from backend.app.routes.blocks import router as block_router
+from backend.app.routes.reports import router as report_router
 
 
 app = FastAPI(
@@ -44,6 +46,8 @@ app.include_router(post_it_router)
 app.include_router(connection_router)
 app.include_router(chat_router)
 app.include_router(profile_router)
+app.include_router(block_router)
+app.include_router(report_router)
 
 
 @app.get("/")
