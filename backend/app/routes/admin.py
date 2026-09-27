@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.profile import Profile
+from backend.app.models.profile_song import ProfileSong
 from backend.app.models.user import User
 from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_admin
@@ -17,12 +18,25 @@ from backend.app.schemas.admin import (
     VerificationUpdateRequest,
     VerificationUpdateResponse,
 )
+from backend.app.schemas.profile import ProfileSongResponse
 
 
 router = APIRouter(
     prefix="/admin",
     tags=["Admin"],
 )
+
+
+def get_profile_picture_url(
+    profile: Profile,
+) -> str | None:
+    if not profile.profile_picture:
+        return None
+
+    return (
+        "/uploads/profile_pictures/"
+        f"{profile.profile_picture}"
+    )
 
 
 @router.get(
@@ -35,8 +49,12 @@ def get_pending_verifications(
 ):
     requests = db.scalars(
         select(VerificationRequest)
-        .where(VerificationRequest.status == "pending")
-        .order_by(VerificationRequest.submitted_at)
+        .where(
+            VerificationRequest.status == "pending"
+        )
+        .order_by(
+            VerificationRequest.submitted_at
+        )
     ).all()
 
     return [
@@ -73,7 +91,10 @@ def update_verification(
             detail="Verification request not found",
         )
 
-    user = db.get(User, verification.user_id)
+    user = db.get(
+        User,
+        verification.user_id,
+    )
 
     if user is None:
         raise HTTPException(
@@ -83,7 +104,9 @@ def update_verification(
 
     verification.status = data.status
     verification.admin_note = data.admin_note
-    verification.reviewed_at = datetime.now(timezone.utc)
+    verification.reviewed_at = datetime.now(
+        timezone.utc
+    )
 
     user.verification_status = data.status
 
@@ -92,7 +115,10 @@ def update_verification(
     if data.status == "verified":
         message = "Student verification approved"
     else:
-        message = "Student verification needs more information"
+        message = (
+            "Student verification needs "
+            "more information"
+        )
 
     return VerificationUpdateResponse(
         username=user.username,
@@ -118,10 +144,24 @@ def get_pending_profiles(
     results = []
 
     for profile in profiles:
-        user = db.get(User, profile.user_id)
+        user = db.get(
+            User,
+            profile.user_id,
+        )
 
         if user is None:
             continue
+
+        songs = db.scalars(
+            select(ProfileSong)
+            .where(
+                ProfileSong.profile_id == profile.id
+            )
+            .order_by(
+                ProfileSong.position,
+                ProfileSong.id,
+            )
+        ).all()
 
         results.append(
             PendingProfileResponse(
@@ -133,6 +173,20 @@ def get_pending_profiles(
                 favorite_quote=profile.favorite_quote,
                 background_style=profile.background_style,
                 font_style=profile.font_style,
+                profile_picture_url=(
+                    get_profile_picture_url(
+                        profile
+                    )
+                ),
+                songs=[
+                    ProfileSongResponse(
+                        id=song.id,
+                        title=song.title,
+                        artist=song.artist,
+                        position=song.position,
+                    )
+                    for song in songs
+                ],
                 status=profile.status,
                 submitted_at=profile.submitted_at,
             )
@@ -151,7 +205,10 @@ def review_profile(
     admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    profile = db.get(Profile, profile_id)
+    profile = db.get(
+        Profile,
+        profile_id,
+    )
 
     if profile is None:
         raise HTTPException(
@@ -174,7 +231,10 @@ def review_profile(
             detail="Explain what needs to be changed",
         )
 
-    user = db.get(User, profile.user_id)
+    user = db.get(
+        User,
+        profile.user_id,
+    )
 
     if user is None:
         raise HTTPException(
@@ -183,12 +243,16 @@ def review_profile(
         )
 
     profile.status = data.status
+
     profile.admin_note = (
         data.admin_note.strip()
         if data.admin_note
         else None
     )
-    profile.reviewed_at = datetime.now(timezone.utc)
+
+    profile.reviewed_at = datetime.now(
+        timezone.utc
+    )
 
     db.commit()
     db.refresh(profile)
