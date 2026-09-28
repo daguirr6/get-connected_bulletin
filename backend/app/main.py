@@ -14,13 +14,23 @@ from backend.app.routes.profiles import router as profile_router
 from backend.app.routes.blocks import router as block_router
 from backend.app.routes.reports import router as report_router
 from backend.app.routes.appeals import router as appeal_router
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(
     title="Get Connected Bulletin API",
     version="0.1.0",
 )
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 UPLOADS_DIR = (
     Path(__file__).resolve().parent.parent
