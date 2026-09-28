@@ -1,3 +1,4 @@
+from backend.app.models.appeal import Appeal
 from backend.app.models.base import Base
 from backend.app.models.block import Block
 from backend.app.models.connection import Connection
