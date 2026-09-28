@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
+from backend.app.moderation import get_public_moderation
 from backend.app.models.connection import Connection
 from backend.app.models.post_it import PostIt
 from backend.app.models.user import User
@@ -136,6 +137,10 @@ def create_connection(
         display_name=target_post_it.display_name,
         major=verification.major,
         connected_at=connection.created_at,
+        moderation=get_public_moderation(
+            db,
+            target_user.id,
+        ),
     )
 
 
@@ -168,6 +173,18 @@ def get_connections(
         else:
             other_user_id = connection.user_one_id
 
+        other_user = db.get(
+            User,
+            other_user_id,
+        )
+
+        if (
+            other_user is None
+            or other_user.verification_status != "verified"
+            or other_user.account_status != "active"
+        ):
+            continue
+
         post_it = db.scalar(
             select(PostIt).where(
                 PostIt.user_id == other_user_id
@@ -193,6 +210,10 @@ def get_connections(
                 display_name=post_it.display_name,
                 major=verification.major,
                 connected_at=connection.created_at,
+                moderation=get_public_moderation(
+                    db,
+                    other_user_id,
+                ),
             )
         )
 
@@ -348,6 +369,10 @@ def get_connection_suggestions(
                 major=verification.major,
                 mutual_count=len(mutual_names),
                 mutual_connections=mutual_names,
+                moderation=get_public_moderation(
+                    db,
+                    candidate_id,
+                ),
             )
         )
 

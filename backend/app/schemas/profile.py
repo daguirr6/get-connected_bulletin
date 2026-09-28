@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.moderation import PublicModerationNotice
+
 
 BackgroundStyle = Literal[
     "paper",
@@ -62,6 +64,7 @@ class ProfileUpdate(BaseModel):
 
 
 class ProfileResponse(BaseModel):
+    moderation: PublicModerationNotice
     id: int
     user_id: int
 

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
+from backend.app.moderation import get_public_moderation
 from backend.app.models.post_it import PostIt
 from backend.app.models.user import User
 from backend.app.models.verification import VerificationRequest
@@ -80,6 +81,10 @@ def create_post_it(
         song_title=post_it.song_title,
         song_artist=post_it.song_artist,
         created_at=post_it.created_at,
+        moderation=get_public_moderation(
+            db,
+            post_it.user_id,
+        ),
     )
 
 
@@ -142,6 +147,10 @@ def get_post_its(
                 song_title=post_it.song_title,
                 song_artist=post_it.song_artist,
                 created_at=post_it.created_at,
+                moderation=get_public_moderation(
+                    db,
+                    post_it.user_id,
+                ),
             )
         )
 
@@ -188,6 +197,10 @@ def get_my_post_it(
         song_title=post_it.song_title,
         song_artist=post_it.song_artist,
         created_at=post_it.created_at,
+        moderation=get_public_moderation(
+            db,
+            post_it.user_id,
+        ),
     )
 
 
@@ -274,7 +287,6 @@ def update_my_post_it(
 
         if song_artist is None:
             post_it.song_artist = None
-
         else:
             song_artist = song_artist.strip()
             post_it.song_artist = (
@@ -293,4 +305,8 @@ def update_my_post_it(
         song_title=post_it.song_title,
         song_artist=post_it.song_artist,
         created_at=post_it.created_at,
+        moderation=get_public_moderation(
+            db,
+            post_it.user_id,
+        ),
     )

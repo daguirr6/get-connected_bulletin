@@ -23,6 +23,7 @@ from backend.app.models.profile_song import ProfileSong
 from backend.app.models.user import User
 from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_verified_user
+from backend.app.moderation import get_public_moderation
 from backend.app.schemas.profile import (
     ProfileResponse,
     ProfileSongCreate,
@@ -623,6 +624,10 @@ def get_public_profile(
     ).all()
 
     return PublicProfileResponse(
+        moderation=get_public_moderation(
+    db,
+    profile.user_id,
+),
         user_id=profile.user_id,
         display_name=post_it.display_name,
         major=verification.major,

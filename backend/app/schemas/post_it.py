@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from backend.app.schemas.moderation import PublicModerationNotice
 
 class PostItCreate(BaseModel):
     display_name: str = Field(min_length=1, max_length=80)
@@ -18,6 +19,7 @@ class PostItUpdate(BaseModel):
 
 
 class PostItResponse(BaseModel):
+    moderation: PublicModerationNotice
     id: int
     user_id: int
     display_name: str
