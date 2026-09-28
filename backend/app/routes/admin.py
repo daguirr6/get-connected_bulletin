@@ -5,16 +5,22 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
+from backend.app.models.moderation_action import ModerationAction
 from backend.app.models.profile import Profile
 from backend.app.models.profile_song import ProfileSong
+from backend.app.models.report import Report
 from backend.app.models.user import User
 from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_admin
 from backend.app.schemas.admin import (
+    ModerationActionResponse,
     PendingProfileResponse,
+    PendingReportResponse,
     PendingVerificationResponse,
     ProfileReviewRequest,
     ProfileReviewResponse,
+    ReportReviewRequest,
+    ReportReviewResponse,
     VerificationUpdateRequest,
     VerificationUpdateResponse,
 )
@@ -116,8 +122,7 @@ def update_verification(
         message = "Student verification approved"
     else:
         message = (
-            "Student verification needs "
-            "more information"
+            "Student verification needs more information"
         )
 
     return VerificationUpdateResponse(
@@ -137,8 +142,12 @@ def get_pending_profiles(
 ):
     profiles = db.scalars(
         select(Profile)
-        .where(Profile.status == "pending")
-        .order_by(Profile.submitted_at)
+        .where(
+            Profile.status == "pending"
+        )
+        .order_by(
+            Profile.submitted_at
+        )
     ).all()
 
     results = []
@@ -174,9 +183,7 @@ def get_pending_profiles(
                 background_style=profile.background_style,
                 font_style=profile.font_style,
                 profile_picture_url=(
-                    get_profile_picture_url(
-                        profile
-                    )
+                    get_profile_picture_url(profile)
                 ),
                 songs=[
                     ProfileSongResponse(
@@ -271,3 +278,210 @@ def review_profile(
         reviewed_at=profile.reviewed_at,
         message=message,
     )
+
+
+@router.get(
+    "/reports/pending",
+    response_model=list[PendingReportResponse],
+)
+def get_pending_reports(
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    reports = db.scalars(
+        select(Report)
+        .where(
+            Report.status == "pending"
+        )
+        .order_by(
+            Report.created_at
+        )
+    ).all()
+
+    results = []
+
+    for report in reports:
+        reported_user = db.get(
+            User,
+            report.reported_user_id,
+        )
+
+        if reported_user is None:
+            continue
+
+        results.append(
+            PendingReportResponse(
+                id=report.id,
+                reporter_id=report.reporter_id,
+                reported_user_id=report.reported_user_id,
+                reported_username=reported_user.username,
+                category=report.category,
+                details=report.details,
+                status=report.status,
+                created_at=report.created_at,
+            )
+        )
+
+    return results
+
+
+@router.patch(
+    "/reports/{report_id}",
+    response_model=ReportReviewResponse,
+)
+def review_report(
+    report_id: int,
+    data: ReportReviewRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    report = db.get(
+        Report,
+        report_id,
+    )
+
+    if report is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found",
+        )
+
+    if report.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Report has already been reviewed",
+        )
+
+    reported_user = db.get(
+        User,
+        report.reported_user_id,
+    )
+
+    if reported_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reported user not found",
+        )
+
+    if data.decision == "dismissed":
+        report.status = "dismissed"
+
+        report.admin_note = (
+            data.private_admin_note.strip()
+            if data.private_admin_note
+            else None
+        )
+
+        report.reviewed_at = datetime.now(
+            timezone.utc
+        )
+
+        db.commit()
+
+        return ReportReviewResponse(
+            report_id=report.id,
+            reported_user_id=reported_user.id,
+            reported_username=reported_user.username,
+            decision="dismissed",
+            moderation_level=None,
+            message="Report dismissed",
+        )
+
+    if data.level is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Choose a moderation level for an upheld report",
+        )
+
+    if (
+        data.public_summary is None
+        or not data.public_summary.strip()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide a public moderation summary",
+        )
+
+    report.status = "upheld"
+
+    report.admin_note = (
+        data.private_admin_note.strip()
+        if data.private_admin_note
+        else None
+    )
+
+    report.reviewed_at = datetime.now(
+        timezone.utc
+    )
+
+    action = ModerationAction(
+        user_id=reported_user.id,
+        source_report_id=report.id,
+        admin_id=admin.id,
+        level=data.level,
+        public_summary=data.public_summary.strip(),
+        private_admin_note=(
+            data.private_admin_note.strip()
+            if data.private_admin_note
+            else None
+        ),
+        status="active",
+    )
+
+    db.add(action)
+    db.commit()
+
+    return ReportReviewResponse(
+        report_id=report.id,
+        reported_user_id=reported_user.id,
+        reported_username=reported_user.username,
+        decision="upheld",
+        moderation_level=data.level,
+        message=(
+            "Report upheld and moderation action created"
+        ),
+    )
+
+
+@router.get(
+    "/users/{user_id}/moderation",
+    response_model=list[ModerationActionResponse],
+)
+def get_user_moderation_actions(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    user = db.get(
+        User,
+        user_id,
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    actions = db.scalars(
+        select(ModerationAction)
+        .where(
+            ModerationAction.user_id == user_id
+        )
+        .order_by(
+            ModerationAction.created_at.desc()
+        )
+    ).all()
+
+    return [
+        ModerationActionResponse(
+            id=action.id,
+            user_id=action.user_id,
+            level=action.level,
+            public_summary=action.public_summary,
+            status=action.status,
+            created_at=action.created_at,
+            expires_at=action.expires_at,
+        )
+        for action in actions
+    ]
