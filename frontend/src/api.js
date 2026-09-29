@@ -2,7 +2,23 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 
 async function readJson(response) {
-  const data = await response.json();
+  if (response.status === 204) {
+    if (!response.ok) {
+      throw new Error(
+        "Something went wrong"
+      );
+    }
+
+    return null;
+  }
+
+  let data = {};
+
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
     const error = new Error(
@@ -31,6 +47,22 @@ function makeAssetUrl(path) {
   }
 
   return `${API_URL}${path}`;
+}
+
+
+function normalizeProfile(profile) {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    ...profile,
+
+    profile_picture_url:
+      makeAssetUrl(
+        profile.profile_picture_url
+      ),
+  };
 }
 
 
@@ -105,7 +137,8 @@ export async function getCurrentUser(
     `${API_URL}/auth/me`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -122,7 +155,8 @@ export async function markVerificationWelcomeSeen(
     {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -138,7 +172,8 @@ export async function getPendingVerifications(
     `${API_URL}/admin/verifications/pending`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -158,12 +193,18 @@ export async function reviewVerification(
     {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
       body: JSON.stringify({
-        status: verificationStatus,
-        admin_note: adminNote,
+        status:
+          verificationStatus,
+
+        admin_note:
+          adminNote,
       }),
     }
   );
@@ -179,7 +220,8 @@ export async function getPostIts(
     `${API_URL}/post-its`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -195,7 +237,8 @@ export async function getMyPostIt(
     `${API_URL}/post-its/me`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -217,10 +260,14 @@ export async function createPostIt(
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
-      body: JSON.stringify(postIt),
+      body:
+        JSON.stringify(postIt),
     }
   );
 
@@ -237,10 +284,14 @@ export async function updateMyPostIt(
     {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
-      body: JSON.stringify(postIt),
+      body:
+        JSON.stringify(postIt),
     }
   );
 
@@ -255,7 +306,8 @@ export async function getConnections(
     `${API_URL}/connections`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -273,7 +325,8 @@ export async function createConnection(
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -289,7 +342,8 @@ export async function getConnectionSuggestions(
     `${API_URL}/connections/suggestions`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -306,7 +360,8 @@ export async function getPublicProfile(
     `${API_URL}/profiles/${userId}`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -314,14 +369,181 @@ export async function getPublicProfile(
   const profile =
     await readJson(response);
 
-  return {
-    ...profile,
+  return normalizeProfile(
+    profile
+  );
+}
 
-    profile_picture_url:
-      makeAssetUrl(
-        profile.profile_picture_url
-      ),
-  };
+
+export async function getMyProfile(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  const profile =
+    await readJson(response);
+
+  return normalizeProfile(
+    profile
+  );
+}
+
+
+export async function updateMyProfile(
+  token,
+  profileData
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body:
+        JSON.stringify(
+          profileData
+        ),
+    }
+  );
+
+  const profile =
+    await readJson(response);
+
+  return normalizeProfile(
+    profile
+  );
+}
+
+
+export async function submitMyProfile(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me/submit`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function addProfileSong(
+  token,
+  title,
+  artist
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me/songs`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title,
+        artist,
+      }),
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function deleteProfileSong(
+  token,
+  songId
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me/songs/${songId}`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function uploadProfilePicture(
+  token,
+  file
+) {
+  const formData =
+    new FormData();
+
+  formData.append(
+    "file",
+    file
+  );
+
+  const response = await fetch(
+    `${API_URL}/profiles/me/picture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+
+  const profile =
+    await readJson(response);
+
+  return normalizeProfile(
+    profile
+  );
+}
+
+
+export async function deleteProfilePicture(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/profiles/me/picture`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
 }
 
 
@@ -332,7 +554,8 @@ export async function getChats(
     `${API_URL}/chats`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -349,7 +572,8 @@ export async function getChatMessages(
     `${API_URL}/chats/${connectionId}/messages`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -367,7 +591,8 @@ export async function markChatRead(
     {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -383,7 +608,8 @@ export async function getMyBlocks(
     `${API_URL}/blocks`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:
+          `Bearer ${token}`,
       },
     }
   );
@@ -402,8 +628,11 @@ export async function blockUser(
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
       body: JSON.stringify({
         reason,
@@ -426,8 +655,11 @@ export async function reportUser(
     {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
       },
       body: JSON.stringify({
         category,

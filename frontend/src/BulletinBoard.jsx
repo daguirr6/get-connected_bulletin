@@ -27,6 +27,7 @@ const stickyClasses = [
 function BulletinBoard({
   token,
   currentUser,
+  onOpenMyProfile,
   onOpenConnections,
   onLogout,
 }) {
@@ -119,7 +120,9 @@ function BulletinBoard({
           );
         }
       } catch (error) {
-        setMessage(error.message);
+        setMessage(
+          error.message
+        );
       } finally {
         setLoading(false);
       }
@@ -170,7 +173,9 @@ function BulletinBoard({
   }
 
 
-  async function handleSubmit(event) {
+  async function handleSubmit(
+    event
+  ) {
     event.preventDefault();
 
     setSaving(true);
@@ -215,14 +220,18 @@ function BulletinBoard({
 
       await loadBulletin();
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message
+      );
     } finally {
       setSaving(false);
     }
   }
 
 
-  async function handleConnect(postIt) {
+  async function handleConnect(
+    postIt
+  ) {
     if (!myPostIt) {
       setMessage(
         "Create your own Post-it before connecting with other students."
@@ -277,7 +286,9 @@ function BulletinBoard({
   }
 
 
-  function safetyLabel(postIt) {
+  function safetyLabel(
+    postIt
+  ) {
     if (
       !postIt.moderation ||
       postIt.moderation.level ===
@@ -320,7 +331,9 @@ function BulletinBoard({
             GEORGE MASON UNIVERSITY
           </p>
 
-          <h1>Get Connected</h1>
+          <h1>
+            Get Connected
+          </h1>
 
           <p>
             Welcome to the campus bulletin.
@@ -329,9 +342,21 @@ function BulletinBoard({
 
         <div className="bulletin-header-actions">
           <button
+            className="header-button gold"
+            type="button"
+            onClick={
+              onOpenMyProfile
+            }
+          >
+            My Profile
+          </button>
+
+          <button
             className="header-button"
             type="button"
-            onClick={onOpenConnections}
+            onClick={
+              onOpenConnections
+            }
           >
             My Connections (
             {connections.length})
@@ -341,7 +366,9 @@ function BulletinBoard({
             <button
               className="header-button"
               type="button"
-              onClick={openEditForm}
+              onClick={
+                openEditForm
+              }
             >
               Edit My Post-it
             </button>
@@ -349,7 +376,9 @@ function BulletinBoard({
             <button
               className="header-button gold"
               type="button"
-              onClick={openCreateForm}
+              onClick={
+                openCreateForm
+              }
             >
               Create My Post-it
             </button>
@@ -394,7 +423,9 @@ function BulletinBoard({
           <button
             className="main-button compact-button"
             type="button"
-            onClick={openCreateForm}
+            onClick={
+              openCreateForm
+            }
           >
             Create My Post-it
           </button>
@@ -408,7 +439,9 @@ function BulletinBoard({
           </span>
 
           <div>
-            <h2>Campus Bulletin</h2>
+            <h2>
+              Campus Bulletin
+            </h2>
 
             <p>
               A little glimpse of the
@@ -472,7 +505,7 @@ function BulletinBoard({
                   isConnected
                 ) {
                   connectText =
-                    "✓ Connected";
+                    "Connected";
                 }
 
 
@@ -506,10 +539,14 @@ function BulletinBoard({
                       </span>
                     )}
 
-                    {safetyLabel(postIt)}
+                    {safetyLabel(
+                      postIt
+                    )}
 
                     <h3>
-                      {postIt.display_name}
+                      {
+                        postIt.display_name
+                      }
                     </h3>
 
                     <p className="post-major">
@@ -530,7 +567,9 @@ function BulletinBoard({
 
                       <div>
                         <strong>
-                          {postIt.song_title}
+                          {
+                            postIt.song_title
+                          }
                         </strong>
 
                         {postIt.song_artist && (
@@ -616,7 +655,9 @@ function BulletinBoard({
 
             <form
               className="post-form"
-              onSubmit={handleSubmit}
+              onSubmit={
+                handleSubmit
+              }
             >
               <label>
                 Display name

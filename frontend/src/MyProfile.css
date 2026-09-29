@@ -1,0 +1,864 @@
+.my-profile-page {
+  min-height: 100vh;
+
+  padding:
+    28px 24px 70px;
+
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(242, 194, 48, 0.08),
+      transparent 34%
+    ),
+    #f5f3e9;
+
+  color: #27352d;
+}
+
+
+.my-profile-topbar {
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto 20px;
+
+  padding: 20px 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  background: #fffbea;
+
+  border:
+    2px solid #f2c230;
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 10px 25px
+    rgba(28, 46, 35, 0.1);
+}
+
+
+.my-profile-topbar h1 {
+  margin: 4px 0;
+
+  color: #006633;
+
+  font-size: 34px;
+}
+
+
+.my-profile-topbar p {
+  margin-bottom: 0;
+}
+
+
+.my-profile-nav {
+  display: flex;
+
+  gap: 10px;
+}
+
+
+.my-profile-nav button {
+  padding: 10px 16px;
+
+  border:
+    2px solid #006633;
+
+  border-radius: 999px;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-weight: 800;
+}
+
+
+.my-profile-nav
+.profile-logout {
+  background: white;
+
+  color: #006633;
+}
+
+
+.profile-editor-status,
+.profile-editor-message,
+.profile-editor-error {
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto 14px;
+
+  padding: 12px 16px;
+
+  border-radius: 8px;
+}
+
+
+.profile-editor-status {
+  background: #fffbea;
+
+  border:
+    1px solid #e0d5a8;
+}
+
+
+.profile-editor-status span {
+  margin-right: 8px;
+}
+
+
+.profile-editor-status p {
+  margin:
+    8px 0 0;
+}
+
+
+.editor-status {
+  padding: 4px 9px;
+
+  border-radius: 999px;
+
+  text-transform: capitalize;
+}
+
+
+.status-draft {
+  background: #ece8d6;
+
+  color: #4f584f;
+}
+
+
+.status-pending {
+  background: #fff0ae;
+
+  color: #665400;
+}
+
+
+.status-approved {
+  background: #d8f1df;
+
+  color: #006633;
+}
+
+
+.status-needs_changes {
+  background: #f8ded5;
+
+  color: #80382b;
+}
+
+
+.status-not {
+  background: #ece8d6;
+}
+
+
+.profile-editor-message {
+  background: #e8f4eb;
+
+  border-left:
+    4px solid #006633;
+
+  color: #00552a;
+}
+
+
+.profile-editor-error {
+  background: #fff0f0;
+
+  border-left:
+    4px solid #a92d36;
+
+  color: #7a282e;
+}
+
+
+.myspace-editor {
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto;
+
+  display: grid;
+
+  grid-template-columns:
+    310px minmax(0, 1fr);
+
+  gap: 18px;
+}
+
+
+.editor-font-arial {
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+
+.editor-font-georgia {
+  font-family:
+    Georgia,
+    "Times New Roman",
+    serif;
+}
+
+
+.editor-font-courier {
+  font-family:
+    "Courier New",
+    Courier,
+    monospace;
+}
+
+
+.editor-font-verdana {
+  font-family:
+    Verdana,
+    Geneva,
+    sans-serif;
+}
+
+
+.editor-font-pixel {
+  font-family:
+    "Courier New",
+    monospace;
+}
+
+
+.profile-left-column,
+.profile-right-column {
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+}
+
+
+.oldweb-name h2 {
+  margin: 0;
+
+  color: #006633;
+
+  font-size: 25px;
+}
+
+
+.profile-photo-panel {
+  padding: 12px;
+
+  background: #fffbea;
+
+  border:
+    1px solid #c9bd8b;
+
+  text-align: center;
+}
+
+
+.editor-profile-picture,
+.editor-picture-placeholder {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  object-fit: cover;
+
+  background: #006633;
+
+  color: white;
+
+  font-size: 78px;
+  font-weight: 900;
+
+  border:
+    1px solid #a99d72;
+}
+
+
+.picture-upload-button,
+.picture-remove-button {
+  width: 100%;
+
+  margin-top: 9px;
+
+  padding: 8px 10px;
+
+  display: block;
+
+  border: none;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  text-align: center;
+}
+
+
+.picture-upload-button input {
+  display: none;
+}
+
+
+.picture-remove-button {
+  background: white;
+
+  border:
+    1px solid #a92d36;
+
+  color: #a92d36;
+}
+
+
+.picture-help,
+.song-help,
+.section-help,
+.appearance-note,
+.review-reminder {
+  color: #6d716b;
+
+  font-size: 11px;
+
+  line-height: 1.5;
+}
+
+
+.oldweb-box,
+.oldweb-wide-box {
+  overflow: hidden;
+
+  background: #fffdf4;
+
+  border:
+    2px solid #006633;
+}
+
+
+.oldweb-box h3,
+.oldweb-wide-box h3 {
+  margin: 0;
+
+  padding: 7px 10px;
+
+  background: #006633;
+
+  color: white;
+
+  font-size: 14px;
+}
+
+
+.oldweb-box > textarea,
+.oldweb-wide-box > textarea {
+  width: calc(100% - 20px);
+
+  margin: 10px;
+
+  box-sizing: border-box;
+}
+
+
+.connection-card-body {
+  padding: 10px;
+}
+
+
+.connection-card-body p {
+  margin:
+    0 0 10px;
+
+  padding-bottom: 8px;
+
+  border-bottom:
+    1px solid #e3ddbf;
+}
+
+
+.connection-card-body
+p strong,
+.connection-card-body
+p span {
+  display: block;
+}
+
+
+.connection-card-body
+p span {
+  margin-top: 3px;
+}
+
+
+.connection-card-body label {
+  margin-top: 12px;
+
+  display: block;
+}
+
+
+.connection-card-body
+label strong {
+  display: block;
+
+  margin-bottom: 5px;
+}
+
+
+.connection-card-body input,
+.connection-card-body select,
+.oldweb-box textarea,
+.oldweb-wide-box textarea,
+.add-song-form input,
+.appearance-grid select,
+.blurb-section textarea {
+  width: 100%;
+
+  padding: 9px 10px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid #aaa383;
+
+  background: white;
+
+  color: #26342c;
+
+  font: inherit;
+
+  outline: none;
+}
+
+
+.connection-card-body input:focus,
+.connection-card-body select:focus,
+.oldweb-box textarea:focus,
+.oldweb-wide-box textarea:focus,
+.add-song-form input:focus,
+.appearance-grid select:focus,
+.blurb-section textarea:focus {
+  border-color: #006633;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(0, 102, 51, 0.09);
+}
+
+
+.oldweb-box textarea,
+.oldweb-wide-box textarea,
+.blurb-section textarea {
+  resize: vertical;
+}
+
+
+.editor-song-list {
+  padding: 8px;
+}
+
+
+.editor-song {
+  padding: 8px 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  border-bottom:
+    1px solid #ddd6b2;
+}
+
+
+.editor-song strong,
+.editor-song span {
+  display: block;
+}
+
+
+.editor-song span {
+  margin-top: 2px;
+
+  color: #6b716c;
+
+  font-size: 11px;
+}
+
+
+.editor-song button {
+  border: none;
+
+  background: transparent;
+
+  color: #a92d36;
+
+  cursor: pointer;
+
+  font-size: 11px;
+  font-weight: 800;
+}
+
+
+.oldweb-empty {
+  margin: 6px;
+
+  color: #777b76;
+
+  font-size: 12px;
+}
+
+
+.add-song-form {
+  padding: 9px;
+
+  display: grid;
+
+  gap: 7px;
+}
+
+
+.add-song-form button {
+  padding: 8px;
+
+  border: none;
+
+  background: #f2c230;
+
+  color: #26342c;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.add-song-form button:disabled {
+  opacity: 0.5;
+}
+
+
+.song-help {
+  margin:
+    0 10px 10px;
+}
+
+
+.extended-network-box {
+  padding: 25px;
+
+  background: #fffbea;
+
+  border:
+    3px solid #006633;
+
+  text-align: center;
+}
+
+
+.extended-network-box h2 {
+  margin:
+    0 0 8px;
+
+  color: #006633;
+
+  font-size: 24px;
+}
+
+
+.extended-network-box p {
+  margin: 0;
+
+  color: #59635d;
+}
+
+
+.oldweb-wide-box {
+  border-color: #f2c230;
+}
+
+
+.oldweb-wide-box h3 {
+  background: #f2c230;
+
+  color: #183326;
+}
+
+
+.section-help {
+  margin:
+    10px 12px 5px;
+}
+
+
+.connect-checkbox-grid {
+  padding: 12px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 8px;
+}
+
+
+.connect-checkbox {
+  padding: 9px 10px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  background: #fffbea;
+
+  border:
+    1px solid #ddd19e;
+
+  cursor: pointer;
+}
+
+
+.connect-checkbox input {
+  accent-color: #006633;
+}
+
+
+.blurb-box h3 {
+  background: #006633;
+
+  color: white;
+}
+
+
+.blurb-section {
+  padding: 12px;
+
+  border-bottom:
+    1px solid #ddd7bd;
+}
+
+
+.blurb-section:last-child {
+  border-bottom: none;
+}
+
+
+.blurb-section label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: #006633;
+
+  font-weight: 900;
+}
+
+
+.appearance-grid {
+  padding: 12px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 12px;
+}
+
+
+.appearance-grid label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+
+  font-weight: 800;
+}
+
+
+.appearance-note {
+  margin:
+    0 12px 12px;
+}
+
+
+.profile-preview-card {
+  padding: 20px;
+
+  background: #fffbea;
+
+  border:
+    2px solid #006633;
+
+  box-shadow:
+    inset 5px 0 0 #f2c230;
+}
+
+
+.profile-preview-card h2 {
+  margin:
+    3px 0 7px;
+
+  color: #006633;
+}
+
+
+.profile-preview-card p {
+  margin:
+    3px 0 8px;
+}
+
+
+.profile-save-area {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 12px;
+}
+
+
+.save-draft-button,
+.submit-profile-button {
+  padding: 13px 16px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.save-draft-button {
+  border:
+    2px solid #006633;
+
+  background: white;
+
+  color: #006633;
+}
+
+
+.submit-profile-button {
+  border:
+    2px solid #006633;
+
+  background: #006633;
+
+  color: white;
+}
+
+
+.save-draft-button:disabled,
+.submit-profile-button:disabled {
+  opacity: 0.5;
+}
+
+
+.review-reminder {
+  margin:
+    -4px 0 0;
+
+  text-align: center;
+}
+
+
+.profile-loading-card {
+  max-width: 520px;
+
+  margin: 120px auto;
+
+  padding: 35px;
+
+  background: #fffbea;
+
+  border:
+    2px solid #f2c230;
+
+  border-radius: 18px;
+
+  text-align: center;
+}
+
+
+.profile-loading-card h1 {
+  color: #006633;
+}
+
+
+@media (max-width: 800px) {
+  .my-profile-page {
+    padding:
+      15px 10px 45px;
+  }
+
+  .my-profile-topbar {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .my-profile-nav {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .myspace-editor {
+    grid-template-columns:
+      1fr;
+  }
+
+  .profile-left-column {
+    order: 1;
+  }
+
+  .profile-right-column {
+    order: 2;
+  }
+
+  .profile-photo-panel {
+    max-width: 360px;
+
+    margin:
+      0 auto;
+
+    width: 100%;
+
+    box-sizing: border-box;
+  }
+
+  .connect-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .appearance-grid {
+    grid-template-columns: 1fr;
+  }
+}

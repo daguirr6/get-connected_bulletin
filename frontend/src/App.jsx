@@ -7,6 +7,7 @@ import AdminDashboard from "./AdminDashboard";
 import BulletinBoard from "./BulletinBoard";
 import ChatPage from "./ChatPage";
 import MyConnections from "./MyConnections";
+import MyProfile from "./MyProfile";
 import PublicProfile from "./PublicProfile";
 import VerifiedCelebration from "./VerifiedCelebration";
 
@@ -45,8 +46,10 @@ function App() {
   const [loading, setLoading] =
     useState(false);
 
-  const [restoringSession, setRestoringSession] =
-    useState(true);
+  const [
+    restoringSession,
+    setRestoringSession,
+  ] = useState(true);
 
   const [authToken, setAuthToken] =
     useState(() =>
@@ -137,7 +140,9 @@ function App() {
   }, [authToken]);
 
 
-  async function handleLogin(event) {
+  async function handleLogin(
+    event
+  ) {
     event.preventDefault();
 
     setLoading(true);
@@ -198,7 +203,9 @@ function App() {
   }
 
 
-  async function handleRegister(event) {
+  async function handleRegister(
+    event
+  ) {
     event.preventDefault();
 
     setLoading(true);
@@ -247,6 +254,7 @@ function App() {
       setCurrentUser(
         (user) => ({
           ...user,
+
           verification_welcome_seen:
             true,
         })
@@ -267,7 +275,9 @@ function App() {
   }
 
 
-  function openProfile(userId) {
+  function openProfile(
+    userId
+  ) {
     setSelectedProfileUserId(
       userId
     );
@@ -278,7 +288,9 @@ function App() {
   }
 
 
-  function openChat(connection) {
+  function openChat(
+    connection
+  ) {
     setSelectedChat(
       connection
     );
@@ -295,7 +307,6 @@ function App() {
     );
 
     setAuthToken(null);
-
     setCurrentUser(null);
 
     setShowCelebration(false);
@@ -472,6 +483,29 @@ function App() {
 
 
     if (
+      studentView ===
+      "my-profile"
+    ) {
+      return (
+        <MyProfile
+          token={authToken}
+          currentUser={
+            currentUser
+          }
+          onBackToBulletin={() =>
+            setStudentView(
+              "bulletin"
+            )
+          }
+          onLogout={
+            handleLogout
+          }
+        />
+      );
+    }
+
+
+    if (
       studentView === "chat" &&
       selectedChat
     ) {
@@ -554,6 +588,11 @@ function App() {
         currentUser={
           currentUser
         }
+        onOpenMyProfile={() =>
+          setStudentView(
+            "my-profile"
+          )
+        }
         onOpenConnections={() =>
           setStudentView(
             "connections"
@@ -633,9 +672,7 @@ function App() {
 
               <input
                 type="text"
-                value={
-                  username
-                }
+                value={username}
                 onChange={(event) =>
                   setUsername(
                     event.target.value
@@ -650,9 +687,7 @@ function App() {
 
               <input
                 type="password"
-                value={
-                  password
-                }
+                value={password}
                 onChange={(event) =>
                   setPassword(
                     event.target.value
@@ -665,9 +700,7 @@ function App() {
             <button
               className="main-button"
               type="submit"
-              disabled={
-                loading
-              }
+              disabled={loading}
             >
               {loading
                 ? "Logging in..."
@@ -686,9 +719,7 @@ function App() {
 
               <input
                 type="text"
-                value={
-                  username
-                }
+                value={username}
                 onChange={(event) =>
                   setUsername(
                     event.target.value
@@ -703,9 +734,7 @@ function App() {
 
               <input
                 type="password"
-                value={
-                  password
-                }
+                value={password}
                 onChange={(event) =>
                   setPassword(
                     event.target.value
@@ -720,9 +749,7 @@ function App() {
 
               <input
                 type="text"
-                value={
-                  fullName
-                }
+                value={fullName}
                 onChange={(event) =>
                   setFullName(
                     event.target.value
@@ -737,9 +764,7 @@ function App() {
 
               <input
                 type="text"
-                value={
-                  major
-                }
+                value={major}
                 onChange={(event) =>
                   setMajor(
                     event.target.value
@@ -762,9 +787,7 @@ function App() {
             <button
               className="main-button"
               type="submit"
-              disabled={
-                loading
-              }
+              disabled={loading}
             >
               {loading
                 ? "Creating..."

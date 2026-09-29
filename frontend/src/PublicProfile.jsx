@@ -12,6 +12,34 @@ import SafetyModal from "./SafetyModal";
 import "./PublicProfile.css";
 
 
+const yearLabels = {
+  freshman: "Freshman",
+  sophomore: "Sophomore",
+  junior: "Junior",
+  senior: "Senior",
+  graduate: "Graduate Student",
+  other: "Other",
+  prefer_not_to_say:
+    "Prefer not to say",
+};
+
+
+function splitLookingFor(
+  value
+) {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split("|")
+    .map(
+      (item) => item.trim()
+    )
+    .filter(Boolean);
+}
+
+
 function PublicProfile({
   token,
   userId,
@@ -72,10 +100,14 @@ function PublicProfile({
   if (loading) {
     return (
       <main className="public-profile-page">
-        <section className="profile-status-card">
-          <p>
-            Loading profile...
+        <section className="public-profile-status">
+          <p className="small-title">
+            GET CONNECTED
           </p>
+
+          <h1>
+            Loading profile...
+          </h1>
         </section>
       </main>
     );
@@ -85,7 +117,7 @@ function PublicProfile({
   if (error) {
     return (
       <main className="public-profile-page">
-        <section className="profile-status-card">
+        <section className="public-profile-status">
           <p className="small-title">
             GET CONNECTED
           </p>
@@ -99,7 +131,6 @@ function PublicProfile({
           </p>
 
           <button
-            className="main-button"
             type="button"
             onClick={onBack}
           >
@@ -111,7 +142,7 @@ function PublicProfile({
   }
 
 
-  const background =
+  const theme =
     profile.background_style ||
     "paper";
 
@@ -121,191 +152,342 @@ function PublicProfile({
 
   const initial =
     profile.display_name
-      ?.trim()
+      .trim()
       .charAt(0)
-      .toUpperCase() || "?";
+      .toUpperCase();
+
+  const year =
+    yearLabels[
+      profile.class_year
+    ] || null;
+
+  const lookingFor =
+    splitLookingFor(
+      profile.looking_for
+    );
 
 
   return (
-    <main className="public-profile-page">
-      <div
-        className="profile-toolbar"
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-          gap: "12px",
-        }}
-      >
-        <button
-          className="profile-back-button"
-          type="button"
-          onClick={onBack}
-        >
-          ← Back to Connections
-        </button>
+    <main
+      className={
+        `public-profile-page ` +
+        `public-theme-${theme} ` +
+        `public-font-${font}`
+      }
+    >
+      <nav className="retro-profile-nav">
+        <div className="retro-brand">
+          Get Connected
+        </div>
 
-        <button
-          className="profile-back-button"
-          type="button"
-          onClick={() =>
-            setShowSafety(true)
-          }
-        >
-          Safety Options
-        </button>
-      </div>
+        <div className="retro-nav-links">
+          <button
+            type="button"
+            onClick={onBack}
+          >
+            Connections
+          </button>
 
+          <span>|</span>
 
-      <section
-        className={
-          `public-profile-shell ` +
-          `profile-theme-${background} ` +
-          `profile-font-${font}`
-        }
-      >
-        {profile.moderation &&
-          profile.moderation.level !==
-            "none" && (
-          <div
-            className={
-              profile.moderation.level ===
-              "red"
-                ? "profile-safety profile-safety-red"
-                : "profile-safety profile-safety-yellow"
+          <button
+            type="button"
+            onClick={() =>
+              setShowSafety(true)
             }
           >
-            Safety notice
-          </div>
-        )}
+            Safety Options
+          </button>
+        </div>
+      </nav>
 
 
-        <header className="profile-hero">
+      <section className="retro-profile-shell">
+        <aside className="retro-left-column">
+          <h1 className="retro-profile-name">
+            {profile.display_name}
+          </h1>
+
+
           {profile.profile_picture_url ? (
             <img
-              className="profile-avatar"
+              className="retro-profile-photo"
               src={
                 profile.profile_picture_url
               }
-              alt=""
+              alt={`${profile.display_name}'s profile`}
             />
           ) : (
-            <div className="profile-avatar profile-avatar-placeholder">
+            <div className="retro-profile-photo retro-photo-placeholder">
               {initial}
             </div>
           )}
 
-          <div className="profile-identity">
-            <p className="profile-eyebrow">
-              GET CONNECTED
-            </p>
 
-            <h1>
-              {profile.display_name}
-            </h1>
-
-            <p className="profile-major">
-              {profile.major}
-            </p>
-          </div>
-        </header>
-
-
-        <div className="profile-columns">
-          <section className="profile-section">
-            <p className="profile-section-label">
-              ABOUT ME
-            </p>
-
+          <section className="retro-box green-box">
             <h2>
-              A little about me
+              Connection Card
             </h2>
 
-            <p className="profile-body-text">
-              {profile.about_me ||
-                "This student hasn't added an About Me yet."}
-            </p>
+            <div className="retro-box-body connection-id-card">
+              <div>
+                <strong>
+                  Name
+                </strong>
+
+                <span>
+                  {profile.display_name}
+                </span>
+              </div>
+
+              <div>
+                <strong>
+                  Major
+                </strong>
+
+                <span>
+                  {profile.major}
+                </span>
+              </div>
+
+              {year && (
+                <div>
+                  <strong>
+                    Year
+                  </strong>
+
+                  <span>
+                    {year}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <strong>
+                  Where I&apos;m headed
+                </strong>
+
+                <span>
+                  {profile.aspiration ||
+                    "Going with the flow"}
+                </span>
+              </div>
+            </div>
           </section>
 
-          <section className="profile-section">
-            <p className="profile-section-label">
-              INTERESTS
-            </p>
 
+          <section className="retro-box green-box">
             <h2>
-              Things I&apos;m into
+              {profile.display_name}&apos;s
+              Interests
             </h2>
 
-            <p className="profile-body-text">
-              {profile.interests ||
-                "No interests added yet."}
-            </p>
-          </section>
-        </div>
-
-
-        {profile.favorite_quote && (
-          <section className="profile-quote">
-            <span className="quote-mark">
-              “
-            </span>
-
-            <p>
-              {profile.favorite_quote}
-            </p>
-          </section>
-        )}
-
-
-        <section className="profile-section profile-music-section">
-          <p className="profile-section-label">
-            MY SONGS
-          </p>
-
-          <h2>
-            Songs on my page
-          </h2>
-
-          {profile.songs.length === 0 ? (
-            <p className="profile-body-text">
-              No songs added yet.
-            </p>
-          ) : (
-            <div className="profile-song-list">
-              {profile.songs.map(
-                (song, index) => (
-                  <article
-                    className="profile-song"
-                    key={song.id}
-                  >
-                    <span className="song-number">
-                      {index + 1}
-                    </span>
-
-                    <div>
-                      <strong>
-                        {song.title}
-                      </strong>
-
-                      <span>
-                        {song.artist}
-                      </span>
-                    </div>
-                  </article>
-                )
+            <div className="retro-box-body">
+              {profile.interests ? (
+                <p className="retro-text">
+                  {profile.interests}
+                </p>
+              ) : (
+                <p className="retro-empty">
+                  Nothing added yet.
+                </p>
               )}
             </div>
+          </section>
+
+
+          <section className="retro-box green-box">
+            <h2>
+              My Music
+            </h2>
+
+            <div className="retro-box-body">
+              {profile.songs.length ===
+              0 ? (
+                <p className="retro-empty">
+                  No songs added yet.
+                </p>
+              ) : (
+                <div className="retro-song-list">
+                  {profile.songs.map(
+                    (song, index) => (
+                      <div
+                        className="retro-song"
+                        key={song.id}
+                      >
+                        <span className="retro-song-number">
+                          {index + 1}
+                        </span>
+
+                        <div>
+                          <strong>
+                            {song.title}
+                          </strong>
+
+                          <span>
+                            {song.artist}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+        </aside>
+
+
+        <section className="retro-right-column">
+          <section className="extended-network">
+            <h2>
+              {profile.display_name} is
+              in your Get Connected
+              network!
+            </h2>
+          </section>
+
+
+          {profile.moderation &&
+            profile.moderation.level !==
+              "none" && (
+            <section
+              className={
+                profile.moderation.level ===
+                "red"
+                  ? "public-safety-box public-safety-red"
+                  : "public-safety-box public-safety-yellow"
+              }
+            >
+              <strong>
+                Safety notice
+              </strong>
+
+              {profile.moderation.notices
+                ?.length > 0 && (
+                <ul>
+                  {profile.moderation.notices.map(
+                    (notice) => (
+                      <li key={notice}>
+                        {notice}
+                      </li>
+                    )
+                  )}
+                </ul>
+              )}
+            </section>
           )}
+
+
+          <section className="retro-box gold-box">
+            <h2>
+              Looking to Connect For
+            </h2>
+
+            <div className="retro-box-body">
+              {lookingFor.length >
+              0 ? (
+                <div className="looking-tags">
+                  {lookingFor.map(
+                    (item) => (
+                      <span
+                        key={item}
+                        className="looking-tag"
+                      >
+                        {item}
+                      </span>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="retro-empty">
+                  Nothing selected yet.
+                </p>
+              )}
+            </div>
+          </section>
+
+
+          <section className="retro-box gold-box">
+            <h2>
+              Ask Me About
+            </h2>
+
+            <div className="retro-box-body">
+              {profile.ask_me_about ? (
+                <p className="retro-text">
+                  {profile.ask_me_about}
+                </p>
+              ) : (
+                <p className="retro-empty">
+                  No topics added yet.
+                </p>
+              )}
+            </div>
+          </section>
+
+
+          <section className="retro-box blurb-box">
+            <h2>
+              {profile.display_name}&apos;s
+              Blurbs
+            </h2>
+
+            <div className="retro-box-body">
+              <section className="public-blurb">
+                <h3>
+                  About me:
+                </h3>
+
+                <p>
+                  {profile.about_me ||
+                    "This student hasn't written an About Me yet."}
+                </p>
+              </section>
+
+
+              {profile.current_obsession && (
+                <section className="public-blurb">
+                  <h3>
+                    Current obsession:
+                  </h3>
+
+                  <p>
+                    {
+                      profile.current_obsession
+                    }
+                  </p>
+                </section>
+              )}
+
+
+              {profile.favorite_quote && (
+                <section className="public-blurb">
+                  <h3>
+                    Favorite quote:
+                  </h3>
+
+                  <blockquote>
+                    “
+                    {
+                      profile.favorite_quote
+                    }
+                    ”
+                  </blockquote>
+                </section>
+              )}
+            </div>
+          </section>
+
+
+          <section className="retro-profile-footer">
+            <p>
+              This profile was reviewed
+              before becoming publicly
+              visible.
+            </p>
+          </section>
         </section>
-
-
-        <footer className="profile-footer">
-          <p>
-            This About Me page was
-            reviewed before becoming
-            publicly visible.
-          </p>
-        </footer>
       </section>
 
 
@@ -321,6 +503,7 @@ function PublicProfile({
           }
           onBlocked={() => {
             setShowSafety(false);
+
             onBack();
           }}
         />
