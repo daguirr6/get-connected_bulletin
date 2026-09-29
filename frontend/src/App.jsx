@@ -1,4 +1,14 @@
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import AdminDashboard from "./AdminDashboard";
+import BulletinBoard from "./BulletinBoard";
+import ChatPage from "./ChatPage";
+import MyConnections from "./MyConnections";
+import PublicProfile from "./PublicProfile";
+import VerifiedCelebration from "./VerifiedCelebration";
 
 import {
   getCurrentUser,
@@ -7,13 +17,12 @@ import {
   registerUser,
 } from "./api";
 
-import VerifiedCelebration from "./VerifiedCelebration";
-
 import "./App.css";
 
 
 function App() {
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] =
+    useState("login");
 
   const [username, setUsername] =
     useState("");
@@ -36,10 +45,96 @@ function App() {
   const [loading, setLoading] =
     useState(false);
 
+  const [restoringSession, setRestoringSession] =
+    useState(true);
+
+  const [authToken, setAuthToken] =
+    useState(() =>
+      sessionStorage.getItem(
+        "access_token"
+      )
+    );
+
   const [
     showCelebration,
     setShowCelebration,
   ] = useState(false);
+
+  const [
+    studentView,
+    setStudentView,
+  ] = useState("bulletin");
+
+  const [
+    selectedProfileUserId,
+    setSelectedProfileUserId,
+  ] = useState(null);
+
+  const [
+    selectedChat,
+    setSelectedChat,
+  ] = useState(null);
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+
+    async function restoreSession() {
+      if (!authToken) {
+        setRestoringSession(false);
+
+        return;
+      }
+
+      try {
+        const user =
+          await getCurrentUser(
+            authToken
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentUser(user);
+
+        const shouldCelebrate =
+          user.role !== "admin" &&
+          user.verification_status ===
+            "verified" &&
+          user.verification_welcome_seen ===
+            false;
+
+        setShowCelebration(
+          shouldCelebrate
+        );
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        sessionStorage.removeItem(
+          "access_token"
+        );
+
+        setAuthToken(null);
+        setCurrentUser(null);
+      } finally {
+        if (!cancelled) {
+          setRestoringSession(false);
+        }
+      }
+    }
+
+
+    restoreSession();
+
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authToken]);
 
 
   async function handleLogin(event) {
@@ -49,21 +144,39 @@ function App() {
     setMessage("");
 
     try {
-      const loginData = await loginUser(
-        username,
-        password
-      );
+      const loginData =
+        await loginUser(
+          username,
+          password
+        );
 
-      localStorage.setItem(
+      sessionStorage.setItem(
         "access_token",
         loginData.access_token
       );
 
-      const user = await getCurrentUser(
+      setAuthToken(
         loginData.access_token
       );
 
+      const user =
+        await getCurrentUser(
+          loginData.access_token
+        );
+
       setCurrentUser(user);
+
+      setStudentView(
+        "bulletin"
+      );
+
+      setSelectedProfileUserId(
+        null
+      );
+
+      setSelectedChat(
+        null
+      );
 
       const shouldCelebrate =
         user.role !== "admin" &&
@@ -76,7 +189,9 @@ function App() {
         shouldCelebrate
       );
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -90,14 +205,17 @@ function App() {
     setMessage("");
 
     try {
-      const data = await registerUser(
-        username,
-        password,
-        fullName,
-        major
-      );
+      const data =
+        await registerUser(
+          username,
+          password,
+          fullName,
+          major
+        );
 
-      setMessage(data.message);
+      setMessage(
+        data.message
+      );
 
       setMode("login");
 
@@ -105,7 +223,9 @@ function App() {
       setFullName("");
       setMajor("");
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -113,45 +233,84 @@ function App() {
 
 
   async function finishCelebration() {
-    const token = localStorage.getItem(
-      "access_token"
-    );
-
-    if (!token) {
-      setMessage(
-        "Your login has expired. Please log in again."
-      );
-
-      setCurrentUser(null);
-      setShowCelebration(false);
+    if (!authToken) {
+      handleLogout();
 
       return;
     }
 
     try {
       await markVerificationWelcomeSeen(
-        token
+        authToken
       );
 
-      setCurrentUser((user) => ({
-        ...user,
-        verification_welcome_seen: true,
-      }));
+      setCurrentUser(
+        (user) => ({
+          ...user,
+          verification_welcome_seen:
+            true,
+        })
+      );
 
-      setShowCelebration(false);
+      setShowCelebration(
+        false
+      );
+
+      setStudentView(
+        "bulletin"
+      );
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message
+      );
     }
   }
 
 
+  function openProfile(userId) {
+    setSelectedProfileUserId(
+      userId
+    );
+
+    setStudentView(
+      "profile"
+    );
+  }
+
+
+  function openChat(connection) {
+    setSelectedChat(
+      connection
+    );
+
+    setStudentView(
+      "chat"
+    );
+  }
+
+
   function handleLogout() {
-    localStorage.removeItem(
+    sessionStorage.removeItem(
       "access_token"
     );
 
+    setAuthToken(null);
+
     setCurrentUser(null);
+
     setShowCelebration(false);
+
+    setStudentView(
+      "bulletin"
+    );
+
+    setSelectedProfileUserId(
+      null
+    );
+
+    setSelectedChat(
+      null
+    );
 
     setUsername("");
     setPassword("");
@@ -162,6 +321,27 @@ function App() {
   }
 
 
+  if (restoringSession) {
+    return (
+      <main className="page">
+        <section className="welcome-card">
+          <p className="small-title">
+            GET CONNECTED
+          </p>
+
+          <h1>
+            Loading...
+          </h1>
+
+          <p>
+            Getting your account ready.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+
   if (
     currentUser &&
     currentUser.role !== "admin" &&
@@ -169,50 +349,36 @@ function App() {
   ) {
     return (
       <VerifiedCelebration
-        username={currentUser.username}
-        onContinue={finishCelebration}
+        username={
+          currentUser.username
+        }
+        onContinue={
+          finishCelebration
+        }
+      />
+    );
+  }
+
+
+  if (
+    currentUser &&
+    currentUser.role === "admin"
+  ) {
+    return (
+      <AdminDashboard
+        token={authToken}
+        username={
+          currentUser.username
+        }
+        onLogout={
+          handleLogout
+        }
       />
     );
   }
 
 
   if (currentUser) {
-    if (currentUser.role === "admin") {
-      return (
-        <main className="page">
-          <section className="welcome-card">
-            <p className="small-title">
-              GET CONNECTED
-            </p>
-
-            <h1>Admin Account</h1>
-
-            <p>
-              Welcome,{" "}
-              <strong>
-                {currentUser.username}
-              </strong>
-              !
-            </p>
-
-            <p>
-              Your administrator account is
-              verified and ready.
-            </p>
-
-            <button
-              className="main-button"
-              type="button"
-              onClick={handleLogout}
-            >
-              Log Out
-            </button>
-          </section>
-        </main>
-      );
-    }
-
-
     if (
       currentUser.verification_status ===
       "pending"
@@ -224,7 +390,9 @@ function App() {
               GET CONNECTED
             </p>
 
-            <h1>You&apos;re almost there!</h1>
+            <h1>
+              You&apos;re almost there!
+            </h1>
 
             <p>
               Your account was created
@@ -244,7 +412,9 @@ function App() {
             <button
               className="main-button"
               type="button"
-              onClick={handleLogout}
+              onClick={
+                handleLogout
+              }
             >
               Log Out
             </button>
@@ -271,15 +441,27 @@ function App() {
             </h1>
 
             <p>
-              Your verification needs
-              additional information before
-              your account can be approved.
+              Your account hasn&apos;t
+              been rejected.
             </p>
+
+            <p>
+              We just need some additional
+              information before your GMU
+              verification can be
+              completed.
+            </p>
+
+            <div className="status-badge">
+              More Information Needed
+            </div>
 
             <button
               className="main-button"
               type="button"
-              onClick={handleLogout}
+              onClick={
+                handleLogout
+              }
             >
               Log Out
             </button>
@@ -289,42 +471,98 @@ function App() {
     }
 
 
+    if (
+      studentView === "chat" &&
+      selectedChat
+    ) {
+      return (
+        <ChatPage
+          token={authToken}
+          currentUser={
+            currentUser
+          }
+          connection={
+            selectedChat
+          }
+          onBack={() => {
+            setSelectedChat(
+              null
+            );
+
+            setStudentView(
+              "connections"
+            );
+          }}
+        />
+      );
+    }
+
+
+    if (
+      studentView === "profile" &&
+      selectedProfileUserId
+    ) {
+      return (
+        <PublicProfile
+          token={authToken}
+          userId={
+            selectedProfileUserId
+          }
+          onBack={() => {
+            setSelectedProfileUserId(
+              null
+            );
+
+            setStudentView(
+              "connections"
+            );
+          }}
+        />
+      );
+    }
+
+
+    if (
+      studentView ===
+      "connections"
+    ) {
+      return (
+        <MyConnections
+          token={authToken}
+          onViewProfile={
+            openProfile
+          }
+          onOpenChat={
+            openChat
+          }
+          onBackToBulletin={() =>
+            setStudentView(
+              "bulletin"
+            )
+          }
+          onLogout={
+            handleLogout
+          }
+        />
+      );
+    }
+
+
     return (
-      <main className="page">
-        <section className="welcome-card">
-          <p className="small-title">
-            GET CONNECTED
-          </p>
-
-          <h1>The Bulletin</h1>
-
-          <p>
-            Welcome,{" "}
-            <strong>
-              {currentUser.username}
-            </strong>
-            !
-          </p>
-
-          <p>
-            You&apos;re verified and ready
-            to Get Connected.
-          </p>
-
-          <p className="bulletin-note">
-            We&apos;ll build the actual
-            bulletin board here next.
-          </p>
-
-          <button
-            className="main-button"
-            type="button"
-            onClick={handleLogout}
-          >
-            Log Out
-          </button>
-        </section>
-      </main>
+      <BulletinBoard
+        token={authToken}
+        currentUser={
+          currentUser
+        }
+        onOpenConnections={() =>
+          setStudentView(
+            "connections"
+          )
+        }
+        onLogout={
+          handleLogout
+        }
+      />
     );
   }
 
@@ -337,7 +575,9 @@ function App() {
             GEORGE MASON UNIVERSITY
           </p>
 
-          <h1>Get Connected</h1>
+          <h1>
+            Get Connected
+          </h1>
 
           <p className="description">
             Meet students. Share a little
@@ -346,6 +586,7 @@ function App() {
             have met otherwise.
           </p>
         </div>
+
 
         <div className="tabs">
           <button
@@ -379,17 +620,22 @@ function App() {
           </button>
         </div>
 
+
         {mode === "login" ? (
           <form
             className="auth-form"
-            onSubmit={handleLogin}
+            onSubmit={
+              handleLogin
+            }
           >
             <label>
               Username
 
               <input
                 type="text"
-                value={username}
+                value={
+                  username
+                }
                 onChange={(event) =>
                   setUsername(
                     event.target.value
@@ -404,7 +650,9 @@ function App() {
 
               <input
                 type="password"
-                value={password}
+                value={
+                  password
+                }
                 onChange={(event) =>
                   setPassword(
                     event.target.value
@@ -417,7 +665,9 @@ function App() {
             <button
               className="main-button"
               type="submit"
-              disabled={loading}
+              disabled={
+                loading
+              }
             >
               {loading
                 ? "Logging in..."
@@ -427,14 +677,18 @@ function App() {
         ) : (
           <form
             className="auth-form"
-            onSubmit={handleRegister}
+            onSubmit={
+              handleRegister
+            }
           >
             <label>
               Username
 
               <input
                 type="text"
-                value={username}
+                value={
+                  username
+                }
                 onChange={(event) =>
                   setUsername(
                     event.target.value
@@ -449,7 +703,9 @@ function App() {
 
               <input
                 type="password"
-                value={password}
+                value={
+                  password
+                }
                 onChange={(event) =>
                   setPassword(
                     event.target.value
@@ -464,7 +720,9 @@ function App() {
 
               <input
                 type="text"
-                value={fullName}
+                value={
+                  fullName
+                }
                 onChange={(event) =>
                   setFullName(
                     event.target.value
@@ -479,7 +737,9 @@ function App() {
 
               <input
                 type="text"
-                value={major}
+                value={
+                  major
+                }
                 onChange={(event) =>
                   setMajor(
                     event.target.value
@@ -502,7 +762,9 @@ function App() {
             <button
               className="main-button"
               type="submit"
-              disabled={loading}
+              disabled={
+                loading
+              }
             >
               {loading
                 ? "Creating..."
@@ -510,6 +772,7 @@ function App() {
             </button>
           </form>
         )}
+
 
         {message && (
           <p className="message">
