@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.moderation_action import ModerationAction
+from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
 from backend.app.models.profile_song import ProfileSong
 from backend.app.models.report import Report
@@ -110,6 +111,7 @@ def update_verification(
 
     verification.status = data.status
     verification.admin_note = data.admin_note
+
     verification.reviewed_at = datetime.now(
         timezone.utc
     )
@@ -161,6 +163,19 @@ def get_pending_profiles(
         if user is None:
             continue
 
+        post_it = db.scalar(
+            select(PostIt).where(
+                PostIt.user_id == profile.user_id
+            )
+        )
+
+        verification = db.scalar(
+            select(VerificationRequest).where(
+                VerificationRequest.user_id
+                == profile.user_id
+            )
+        )
+
         songs = db.scalars(
             select(ProfileSong)
             .where(
@@ -172,18 +187,39 @@ def get_pending_profiles(
             )
         ).all()
 
+        display_name = (
+            post_it.display_name
+            if post_it is not None
+            else user.username
+        )
+
+        major = (
+            verification.major
+            if verification is not None
+            else "Unknown"
+        )
+
         results.append(
             PendingProfileResponse(
                 id=profile.id,
                 user_id=profile.user_id,
                 username=user.username,
+                display_name=display_name,
+                major=major,
                 about_me=profile.about_me,
                 interests=profile.interests,
                 favorite_quote=profile.favorite_quote,
+                class_year=profile.class_year,
+                aspiration=profile.aspiration,
+                looking_for=profile.looking_for,
+                ask_me_about=profile.ask_me_about,
+                current_obsession=profile.current_obsession,
                 background_style=profile.background_style,
                 font_style=profile.font_style,
                 profile_picture_url=(
-                    get_profile_picture_url(profile)
+                    get_profile_picture_url(
+                        profile
+                    )
                 ),
                 songs=[
                     ProfileSongResponse(
@@ -390,7 +426,10 @@ def review_report(
     if data.level is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Choose a moderation level for an upheld report",
+            detail=(
+                "Choose a moderation level "
+                "for an upheld report"
+            ),
         )
 
     if (
@@ -399,7 +438,9 @@ def review_report(
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Provide a public moderation summary",
+            detail=(
+                "Provide a public moderation summary"
+            ),
         )
 
     report.status = "upheld"
@@ -419,7 +460,9 @@ def review_report(
         source_report_id=report.id,
         admin_id=admin.id,
         level=data.level,
-        public_summary=data.public_summary.strip(),
+        public_summary=(
+            data.public_summary.strip()
+        ),
         private_admin_note=(
             data.private_admin_note.strip()
             if data.private_admin_note

@@ -16,7 +16,10 @@ class PendingVerificationResponse(BaseModel):
 
 
 class VerificationUpdateRequest(BaseModel):
-    status: Literal["verified", "needs_info"]
+    status: Literal[
+        "verified",
+        "needs_info",
+    ]
 
     admin_note: str | None = Field(
         default=None,
@@ -33,11 +36,20 @@ class VerificationUpdateResponse(BaseModel):
 class PendingProfileResponse(BaseModel):
     id: int
     user_id: int
+
     username: str
+    display_name: str
+    major: str
 
     about_me: str | None
     interests: str | None
     favorite_quote: str | None
+
+    class_year: str | None
+    aspiration: str | None
+    looking_for: str | None
+    ask_me_about: str | None
+    current_obsession: str | None
 
     background_style: str | None
     font_style: str | None
