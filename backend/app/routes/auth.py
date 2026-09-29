@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -41,7 +44,9 @@ def register_user(
     username = data.username.strip().lower()
 
     existing_user = db.scalar(
-        select(User).where(User.username == username)
+        select(User).where(
+            User.username == username
+        )
     )
 
     if existing_user:
@@ -52,7 +57,9 @@ def register_user(
 
     user = User(
         username=username,
-        password_hash=hash_password(data.password),
+        password_hash=hash_password(
+            data.password
+        ),
     )
 
     db.add(user)
@@ -70,7 +77,10 @@ def register_user(
     return RegisterResponse(
         username=user.username,
         verification_status=user.verification_status,
-        message="Account created. Student verification is pending.",
+        message=(
+            "Account created. "
+            "Student verification is pending."
+        ),
     )
 
 
@@ -85,7 +95,9 @@ def login_user(
     username = data.username.strip().lower()
 
     user = db.scalar(
-        select(User).where(User.username == username)
+        select(User).where(
+            User.username == username
+        )
     )
 
     if user is None:
@@ -94,13 +106,18 @@ def login_user(
             detail="Invalid username or password",
         )
 
-    if not verify_password(data.password, user.password_hash):
+    if not verify_password(
+        data.password,
+        user.password_hash,
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         )
 
-    access_token = create_access_token(user.id)
+    access_token = create_access_token(
+        user.id
+    )
 
     return LoginResponse(
         access_token=access_token,
@@ -108,10 +125,14 @@ def login_user(
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials = Depends(
+        bearer_scheme
+    ),
     db: Session = Depends(get_db),
 ):
-    user_id = decode_access_token(credentials.credentials)
+    user_id = decode_access_token(
+        credentials.credentials
+    )
 
     if user_id is None:
         raise HTTPException(
@@ -119,7 +140,10 @@ def get_current_user(
             detail="Invalid or expired login",
         )
 
-    user = db.get(User, user_id)
+    user = db.get(
+        User,
+        user_id,
+    )
 
     if user is None:
         raise HTTPException(
@@ -131,7 +155,9 @@ def get_current_user(
 
 
 def require_admin(
-    user: User = Depends(get_current_user),
+    user: User = Depends(
+        get_current_user
+    ),
 ):
     if user.role != "admin":
         raise HTTPException(
@@ -143,7 +169,9 @@ def require_admin(
 
 
 def require_verified_user(
-    user: User = Depends(get_current_user),
+    user: User = Depends(
+        get_current_user
+    ),
 ):
     if user.verification_status != "verified":
         raise HTTPException(
@@ -159,11 +187,40 @@ def require_verified_user(
     response_model=CurrentUserResponse,
 )
 def current_user(
-    user: User = Depends(get_current_user),
+    user: User = Depends(
+        get_current_user
+    ),
 ):
     return CurrentUserResponse(
         id=user.id,
         username=user.username,
         role=user.role,
         verification_status=user.verification_status,
+        verification_welcome_seen=(
+            user.verification_welcome_seen
+        ),
     )
+
+
+@router.patch(
+    "/verification-welcome-seen",
+)
+def mark_verification_welcome_seen(
+    user: User = Depends(
+        require_verified_user
+    ),
+    db: Session = Depends(get_db),
+):
+    user.verification_welcome_seen = True
+
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "message": (
+            "Verification welcome marked as seen"
+        ),
+        "verification_welcome_seen": (
+            user.verification_welcome_seen
+        ),
+    }
