@@ -9,6 +9,7 @@ import ChatPage from "./ChatPage";
 import MyConnections from "./MyConnections";
 import MyProfile from "./MyProfile";
 import PublicProfile from "./PublicProfile";
+import SafetyCenter from "./SafetyCenter";
 import VerifiedCelebration from "./VerifiedCelebration";
 
 import {
@@ -506,6 +507,26 @@ function App() {
 
 
     if (
+      studentView ===
+      "safety-center"
+    ) {
+      return (
+        <SafetyCenter
+          token={authToken}
+          onBack={() =>
+            setStudentView(
+              "bulletin"
+            )
+          }
+          onLogout={
+            handleLogout
+          }
+        />
+      );
+    }
+
+
+    if (
       studentView === "chat" &&
       selectedChat
     ) {
@@ -596,6 +617,11 @@ function App() {
         onOpenConnections={() =>
           setStudentView(
             "connections"
+          )
+        }
+        onOpenSafetyCenter={() =>
+          setStudentView(
+            "safety-center"
           )
         }
         onLogout={

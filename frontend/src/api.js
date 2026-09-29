@@ -213,6 +213,102 @@ export async function reviewVerification(
 }
 
 
+export async function getPendingProfiles(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/admin/profiles/pending`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  const profiles =
+    await readJson(response);
+
+  return profiles.map(
+    normalizeProfile
+  );
+}
+
+
+export async function reviewProfile(
+  token,
+  profileId,
+  profileStatus,
+  adminNote
+) {
+  const response = await fetch(
+    `${API_URL}/admin/profiles/${profileId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status:
+          profileStatus,
+
+        admin_note:
+          adminNote,
+      }),
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function getPendingReports(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/admin/reports/pending`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function reviewReport(
+  token,
+  reportId,
+  reviewData
+) {
+  const response = await fetch(
+    `${API_URL}/admin/reports/${reportId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body: JSON.stringify(
+        reviewData
+      ),
+    }
+  );
+
+  return readJson(response);
+}
+
+
 export async function getPostIts(
   token
 ) {

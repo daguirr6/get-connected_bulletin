@@ -29,6 +29,7 @@ function BulletinBoard({
   currentUser,
   onOpenMyProfile,
   onOpenConnections,
+  onOpenSafetyCenter,
   onLogout,
 }) {
   const [postIts, setPostIts] =
@@ -360,6 +361,16 @@ function BulletinBoard({
           >
             My Connections (
             {connections.length})
+          </button>
+
+          <button
+            className="header-button"
+            type="button"
+            onClick={
+              onOpenSafetyCenter
+            }
+          >
+            Safety & Appeals
           </button>
 
           {myPostIt ? (

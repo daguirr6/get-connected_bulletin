@@ -1,0 +1,503 @@
+.safety-center-page {
+  min-height: 100vh;
+
+  padding:
+    28px 24px 70px;
+
+  background: #f5f3e9;
+
+  color: #27352d;
+}
+
+
+.safety-center-header {
+  width: 100%;
+  max-width: 1000px;
+
+  margin: 0 auto 18px;
+
+  padding: 22px 24px;
+
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  background: #fffbea;
+
+  border:
+    2px solid #f2c230;
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 10px 25px
+    rgba(28, 46, 35, 0.1);
+}
+
+
+.safety-center-header h1 {
+  margin:
+    4px 0;
+
+  color: #006633;
+}
+
+
+.safety-center-header p {
+  margin-bottom: 0;
+
+  line-height: 1.5;
+}
+
+
+.safety-center-nav {
+  display: flex;
+
+  gap: 9px;
+}
+
+
+.safety-center-nav button {
+  padding:
+    10px 15px;
+
+  border:
+    2px solid #006633;
+
+  border-radius: 999px;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-weight: 800;
+}
+
+
+.safety-center-nav
+.safety-center-logout {
+  background: white;
+
+  color: #006633;
+}
+
+
+.safety-privacy-note,
+.safety-center-message,
+.safety-center-error,
+.safety-center-panel {
+  width: 100%;
+  max-width: 1000px;
+
+  margin:
+    0 auto 16px;
+
+  box-sizing: border-box;
+}
+
+
+.safety-privacy-note {
+  padding:
+    15px 18px;
+
+  background: #eaf4ed;
+
+  border-left:
+    5px solid #006633;
+}
+
+
+.safety-privacy-note strong {
+  color: #006633;
+}
+
+
+.safety-privacy-note p {
+  margin:
+    5px 0 0;
+
+  line-height: 1.5;
+}
+
+
+.safety-center-message {
+  padding:
+    12px 16px;
+
+  background: #e6f4e9;
+
+  border-left:
+    4px solid #006633;
+
+  color: #00562b;
+}
+
+
+.safety-center-error {
+  padding:
+    12px 16px;
+
+  background: #fff0f0;
+
+  border-left:
+    4px solid #a92d36;
+
+  color: #79262c;
+}
+
+
+.safety-center-panel {
+  padding: 20px;
+
+  background: #fffdf4;
+
+  border:
+    2px solid #f2c230;
+}
+
+
+.safety-panel-heading h2 {
+  margin:
+    3px 0 18px;
+
+  color: #006633;
+}
+
+
+.safety-empty {
+  padding: 35px;
+
+  background: #fffbea;
+
+  border:
+    1px dashed #cfc392;
+
+  text-align: center;
+}
+
+
+.safety-empty h3 {
+  color: #006633;
+}
+
+
+.safety-action-list {
+  display: grid;
+
+  gap: 16px;
+}
+
+
+.student-moderation-card {
+  padding: 18px;
+
+  background: white;
+
+  border: 2px solid;
+
+  border-left-width: 7px;
+}
+
+
+.student-moderation-yellow {
+  border-color: #d9ae13;
+}
+
+
+.student-moderation-red {
+  border-color: #a92d36;
+}
+
+
+.student-moderation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+}
+
+
+.student-moderation-heading h3 {
+  margin:
+    3px 0 0;
+}
+
+
+.student-moderation-yellow
+.student-moderation-heading h3 {
+  color: #7a6100;
+}
+
+
+.student-moderation-red
+.student-moderation-heading h3 {
+  color: #8a2730;
+}
+
+
+.student-action-status {
+  padding:
+    5px 9px;
+
+  border-radius: 999px;
+
+  background: #ece8d6;
+
+  text-transform: capitalize;
+
+  font-size: 11px;
+
+  font-weight: 800;
+}
+
+
+.action-status-active {
+  background: #fff0ae;
+
+  color: #665400;
+}
+
+
+.action-status-overturned {
+  background: #d8f1df;
+
+  color: #006633;
+}
+
+
+.student-public-reason {
+  margin-top: 15px;
+
+  padding: 13px;
+
+  background: #fffbea;
+
+  border:
+    1px solid #ded3a8;
+}
+
+
+.student-public-reason strong {
+  color: #006633;
+}
+
+
+.student-public-reason p {
+  margin:
+    6px 0 0;
+
+  line-height: 1.55;
+}
+
+
+.student-action-date {
+  color: #777d77;
+
+  font-size: 11px;
+}
+
+
+.submit-appeal-box,
+.existing-appeal-box {
+  margin-top: 16px;
+
+  padding: 16px;
+
+  background: #f5f3e9;
+
+  border:
+    1px solid #d7d0b4;
+}
+
+
+.submit-appeal-box h4 {
+  margin:
+    0 0 5px;
+
+  color: #006633;
+}
+
+
+.submit-appeal-box p {
+  line-height: 1.5;
+}
+
+
+.submit-appeal-box textarea {
+  width: 100%;
+
+  padding: 11px;
+
+  box-sizing: border-box;
+
+  resize: vertical;
+
+  border:
+    1px solid #a9a184;
+
+  background: white;
+
+  color: #27352d;
+
+  font: inherit;
+
+  outline: none;
+}
+
+
+.submit-appeal-box textarea:focus {
+  border-color: #006633;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 102, 51, 0.09);
+}
+
+
+.appeal-character-note {
+  margin-top: 5px;
+
+  color: #777c77;
+
+  font-size: 11px;
+}
+
+
+.submit-appeal-box button {
+  margin-top: 12px;
+
+  padding:
+    10px 17px;
+
+  border:
+    2px solid #006633;
+
+  border-radius: 999px;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.submit-appeal-box button:disabled {
+  opacity: 0.5;
+}
+
+
+.existing-appeal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 12px;
+}
+
+
+.appeal-status {
+  padding:
+    5px 9px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+
+  font-weight: 800;
+}
+
+
+.appeal-pending {
+  background: #fff0ae;
+
+  color: #665400;
+}
+
+
+.appeal-accepted {
+  background: #d8f1df;
+
+  color: #006633;
+}
+
+
+.appeal-denied {
+  background: #f5dddd;
+
+  color: #8a2730;
+}
+
+
+.appeal-label {
+  margin:
+    14px 0 3px;
+
+  color: #006633;
+
+  font-size: 12px;
+
+  font-weight: 900;
+}
+
+
+.existing-appeal-box
+p:not(.appeal-label) {
+  margin:
+    4px 0;
+
+  white-space: pre-wrap;
+
+  line-height: 1.55;
+}
+
+
+.appeal-accepted-box {
+  margin-top: 14px;
+
+  padding: 12px;
+
+  background: #e2f3e7;
+
+  border-left:
+    4px solid #006633;
+
+  color: #00562b;
+}
+
+
+@media (max-width: 720px) {
+  .safety-center-page {
+    padding:
+      14px 10px 45px;
+  }
+
+  .safety-center-header {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .safety-center-nav {
+    display: grid;
+
+    grid-template-columns:
+      1fr 1fr;
+  }
+
+  .student-moderation-heading,
+  .existing-appeal-heading {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+}

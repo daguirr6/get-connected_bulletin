@@ -1,0 +1,734 @@
+.profile-review-panel,
+.safety-review-panel,
+.appeal-review-panel {
+  margin-top: 24px;
+}
+
+
+.admin-success-message,
+.admin-error-message {
+  max-width: 1100px;
+
+  margin:
+    0 auto 18px;
+
+  padding:
+    12px 16px;
+
+  border-radius: 8px;
+}
+
+
+.admin-success-message {
+  background: #e6f4e9;
+
+  border-left:
+    4px solid #006633;
+
+  color: #00562b;
+}
+
+
+.admin-error-message {
+  background: #fff0f0;
+
+  border-left:
+    4px solid #a92d36;
+
+  color: #79262c;
+}
+
+
+.admin-profile-list,
+.admin-report-list,
+.admin-appeal-list {
+  display: grid;
+
+  gap: 12px;
+}
+
+
+.admin-profile-card,
+.admin-report-card,
+.admin-appeal-card {
+  padding: 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  background: #fffdf4;
+
+  border:
+    1px solid #ddd3a8;
+
+  border-left:
+    5px solid #f2c230;
+}
+
+
+.admin-profile-person {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+}
+
+
+.admin-profile-person img,
+.admin-profile-placeholder {
+  width: 72px;
+  height: 72px;
+
+  flex: 0 0 72px;
+
+  object-fit: cover;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #006633;
+
+  color: white;
+
+  border:
+    1px solid #b9ad80;
+
+  font-size: 28px;
+  font-weight: 900;
+}
+
+
+.admin-profile-person h3,
+.admin-report-card h3,
+.admin-appeal-card h3 {
+  margin:
+    2px 0 4px;
+
+  color: #006633;
+}
+
+
+.admin-profile-person p,
+.admin-profile-person small,
+.admin-report-card p,
+.admin-appeal-card p {
+  margin:
+    3px 0;
+
+  color: #69716b;
+}
+
+
+.admin-preview-button,
+.admin-report-review-button,
+.admin-appeal-review-button {
+  padding:
+    10px 16px;
+
+  border:
+    2px solid #006633;
+
+  border-radius: 999px;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-weight: 800;
+}
+
+
+.admin-report-card {
+  border-left-color:
+    #d49c2d;
+}
+
+
+.admin-appeal-yellow {
+  border-left-color:
+    #d9ae13;
+}
+
+
+.admin-appeal-red {
+  border-left-color:
+    #a92d36;
+}
+
+
+.admin-review-backdrop {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 800;
+
+  padding: 24px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background:
+    rgba(20, 27, 22, 0.72);
+}
+
+
+.admin-profile-review-modal,
+.admin-report-review-modal,
+.admin-appeal-review-modal {
+  width: 100%;
+  max-width: 980px;
+
+  max-height: 92vh;
+
+  overflow-y: auto;
+
+  position: relative;
+
+  padding: 28px;
+
+  box-sizing: border-box;
+
+  background: #f5f3e9;
+
+  border:
+    3px solid #f2c230;
+
+  box-shadow:
+    0 24px 60px
+    rgba(0, 0, 0, 0.4);
+}
+
+
+.admin-report-review-modal,
+.admin-appeal-review-modal {
+  max-width: 760px;
+}
+
+
+.admin-review-close {
+  position: absolute;
+
+  top: 12px;
+  right: 16px;
+
+  border: none;
+
+  background: transparent;
+
+  color: #525b54;
+
+  cursor: pointer;
+
+  font-size: 32px;
+}
+
+
+.admin-review-heading {
+  margin-bottom: 20px;
+
+  padding:
+    14px 50px 14px 18px;
+
+  background: #fffbea;
+
+  border-left:
+    6px solid #006633;
+}
+
+
+.admin-review-heading.safety-heading {
+  border-left-color:
+    #d49c2d;
+}
+
+
+.admin-review-heading.appeal-heading {
+  border-left-color:
+    #f2c230;
+}
+
+
+.admin-review-heading h2 {
+  margin:
+    3px 0 5px;
+
+  color: #006633;
+
+  font-size: 28px;
+}
+
+
+.admin-review-heading p {
+  margin:
+    3px 0;
+}
+
+
+.admin-review-grid {
+  display: grid;
+
+  grid-template-columns:
+    300px minmax(0, 1fr);
+
+  gap: 16px;
+}
+
+
+.admin-review-grid aside,
+.admin-review-main {
+  display: flex;
+  flex-direction: column;
+
+  gap: 13px;
+}
+
+
+.admin-review-photo {
+  width: 100%;
+
+  aspect-ratio: 1 / 1;
+
+  object-fit: cover;
+
+  background: #006633;
+
+  border:
+    1px solid #a99d72;
+}
+
+
+.admin-review-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: white;
+
+  font-size: 80px;
+  font-weight: 900;
+}
+
+
+.admin-review-box {
+  overflow: hidden;
+
+  background: #fffdf4;
+
+  border:
+    2px solid #006633;
+}
+
+
+.admin-review-box h3 {
+  margin: 0;
+
+  padding:
+    7px 10px;
+
+  background: #006633;
+
+  color: white;
+
+  font-size: 14px;
+}
+
+
+.admin-review-box.gold-heading {
+  border-color: #f2c230;
+}
+
+
+.admin-review-box.gold-heading h3 {
+  background: #f2c230;
+
+  color: #193429;
+}
+
+
+.admin-review-box p,
+.admin-review-songs {
+  margin: 0;
+
+  padding: 12px;
+
+  white-space: pre-wrap;
+
+  line-height: 1.55;
+}
+
+
+.admin-review-box p + p {
+  padding-top: 0;
+}
+
+
+.admin-review-songs {
+  padding-left: 32px;
+}
+
+
+.admin-review-songs li {
+  margin-bottom: 7px;
+}
+
+
+.admin-review-decision,
+.private-report-box,
+.appeal-original-action,
+.appeal-student-reason,
+.appeal-review-explanation {
+  margin-top: 16px;
+
+  padding: 16px;
+
+  background: #fffbea;
+
+  border:
+    1px solid #d8d0ae;
+}
+
+
+.admin-review-decision {
+  border:
+    2px solid #f2c230;
+}
+
+
+.admin-review-decision h3,
+.appeal-review-explanation h3 {
+  margin:
+    0 0 5px;
+
+  color: #006633;
+}
+
+
+.private-report-box {
+  border:
+    2px solid #d4a94a;
+}
+
+
+.private-report-box > p:not(.small-title),
+.appeal-original-action > p:not(.small-title),
+.appeal-student-reason > p:not(.small-title) {
+  margin:
+    10px 0;
+
+  white-space: pre-wrap;
+
+  line-height: 1.65;
+}
+
+
+.appeal-student-reason {
+  background: #ffffff;
+
+  border-left:
+    5px solid #006633;
+}
+
+
+.appeal-original-action {
+  border-left:
+    5px solid #f2c230;
+}
+
+
+.appeal-original-action small {
+  color: #777d77;
+}
+
+
+.admin-review-decision textarea,
+.admin-report-fields textarea,
+.admin-report-fields select,
+.admin-appeal-fields textarea {
+  width: 100%;
+
+  padding: 11px;
+
+  box-sizing: border-box;
+
+  resize: vertical;
+
+  border:
+    1px solid #aaa384;
+
+  background: white;
+
+  color: #27342d;
+
+  font: inherit;
+
+  outline: none;
+}
+
+
+.admin-review-decision textarea:focus,
+.admin-report-fields textarea:focus,
+.admin-report-fields select:focus,
+.admin-appeal-fields textarea:focus {
+  border-color: #006633;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(0, 102, 51, 0.09);
+}
+
+
+.admin-review-buttons,
+.report-decision-buttons,
+.appeal-decision-buttons {
+  margin-top: 14px;
+
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 12px;
+}
+
+
+.admin-review-buttons button,
+.report-decision-buttons button,
+.appeal-decision-buttons button {
+  padding:
+    12px 15px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.admin-needs-changes {
+  border:
+    2px solid #a05e2a;
+
+  background: white;
+
+  color: #864a1f;
+}
+
+
+.admin-approve-profile,
+.uphold-report-button,
+.accept-appeal-button {
+  border:
+    2px solid #006633;
+
+  background: #006633;
+
+  color: white;
+}
+
+
+.dismiss-report-button {
+  border:
+    2px solid #666f69;
+
+  background: white;
+
+  color: #48514b;
+}
+
+
+.deny-appeal-button {
+  border:
+    2px solid #a92d36;
+
+  background: white;
+
+  color: #8a2730;
+}
+
+
+.admin-review-buttons button:disabled,
+.report-decision-buttons button:disabled,
+.appeal-decision-buttons button:disabled {
+  opacity: 0.45;
+
+  cursor: default;
+}
+
+
+.private-report-meta {
+  padding-top: 10px;
+
+  display: flex;
+  flex-wrap: wrap;
+
+  gap:
+    6px 18px;
+
+  border-top:
+    1px solid #ddd2a8;
+
+  color: #757a75;
+
+  font-size: 11px;
+}
+
+
+.admin-safety-explanation,
+.appeal-review-explanation {
+  background: #eaf4ed;
+
+  border-left:
+    5px solid #006633;
+}
+
+
+.moderation-level-section {
+  margin-top: 16px;
+
+  padding: 16px;
+
+  background: #fffdf4;
+
+  border:
+    1px solid #d8d0ae;
+}
+
+
+.moderation-level-section h3 {
+  margin:
+    0 0 12px;
+
+  color: #006633;
+}
+
+
+.moderation-level-options {
+  display: grid;
+
+  grid-template-columns:
+    1fr 1fr;
+
+  gap: 12px;
+}
+
+
+.moderation-level-options label {
+  padding: 14px;
+
+  display: flex;
+  align-items: flex-start;
+
+  gap: 10px;
+
+  cursor: pointer;
+
+  border: 2px solid;
+}
+
+
+.moderation-level-options input {
+  margin-top: 4px;
+
+  accent-color: #006633;
+}
+
+
+.moderation-level-options strong,
+.moderation-level-options span {
+  display: block;
+}
+
+
+.yellow-level-choice {
+  background: #fff8d2;
+
+  border-color: #d9ae13;
+
+  color: #5f4d00;
+}
+
+
+.red-level-choice {
+  background: #fff0f1;
+
+  border-color: #a92d36;
+
+  color: #77242b;
+}
+
+
+.admin-report-fields,
+.admin-appeal-fields {
+  margin-top: 16px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 14px;
+
+  padding: 16px;
+
+  background: #fffdf4;
+
+  border:
+    1px solid #d8d0ae;
+}
+
+
+.admin-report-fields label,
+.admin-appeal-fields label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  font-weight: 800;
+}
+
+
+@media (max-width: 760px) {
+  .admin-profile-card,
+  .admin-report-card,
+  .admin-appeal-card {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .admin-preview-button,
+  .admin-report-review-button,
+  .admin-appeal-review-button {
+    width: 100%;
+  }
+
+  .admin-review-backdrop {
+    padding: 8px;
+  }
+
+  .admin-profile-review-modal,
+  .admin-report-review-modal,
+  .admin-appeal-review-modal {
+    padding:
+      22px 14px;
+  }
+
+  .admin-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-review-buttons,
+  .moderation-level-options,
+  .report-decision-buttons,
+  .appeal-decision-buttons {
+    grid-template-columns: 1fr;
+  }
+}
