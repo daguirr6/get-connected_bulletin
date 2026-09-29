@@ -1,14 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
-from backend.app.moderation import get_public_moderation
+from backend.app.moderation import (
+    get_public_moderation,
+)
 from backend.app.models.post_it import PostIt
 from backend.app.models.user import User
-from backend.app.models.verification import VerificationRequest
-from backend.app.routes.auth import require_verified_user
+from backend.app.models.verification import (
+    VerificationRequest,
+)
+from backend.app.routes.auth import (
+    require_verified_user,
+)
 from backend.app.schemas.post_it import (
     PostItCreate,
     PostItResponse,
@@ -29,7 +40,9 @@ router = APIRouter(
 )
 def create_post_it(
     data: PostItCreate,
-    user: User = Depends(require_verified_user),
+    user: User = Depends(
+        require_verified_user
+    ),
     db: Session = Depends(get_db),
 ):
     existing_post = db.scalar(
@@ -40,32 +53,50 @@ def create_post_it(
 
     if existing_post:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You already have a Post-it",
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "You already have a Post-it"
+            ),
         )
 
     verification = db.scalar(
-        select(VerificationRequest).where(
-            VerificationRequest.user_id == user.id
+        select(
+            VerificationRequest
+        ).where(
+            VerificationRequest.user_id
+            == user.id
         )
     )
 
     if verification is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification record not found",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Verification record not found"
+            ),
         )
 
     post_it = PostIt(
         user_id=user.id,
-        display_name=data.display_name.strip(),
-        fun_facts=data.fun_facts.strip(),
-        song_title=data.song_title.strip(),
+
+        display_name=
+            data.display_name.strip(),
+
+        fun_facts=
+            data.fun_facts.strip(),
+
+        song_title=
+            data.song_title.strip(),
+
         song_artist=(
             data.song_artist.strip()
             if data.song_artist
             else None
         ),
+
+        color=data.color,
     )
 
     db.add(post_it)
@@ -75,16 +106,33 @@ def create_post_it(
     return PostItResponse(
         id=post_it.id,
         user_id=post_it.user_id,
-        display_name=post_it.display_name,
-        major=verification.major,
-        fun_facts=post_it.fun_facts,
-        song_title=post_it.song_title,
-        song_artist=post_it.song_artist,
-        created_at=post_it.created_at,
-        moderation=get_public_moderation(
-            db,
-            post_it.user_id,
-        ),
+
+        display_name=
+            post_it.display_name,
+
+        major=
+            verification.major,
+
+        fun_facts=
+            post_it.fun_facts,
+
+        song_title=
+            post_it.song_title,
+
+        song_artist=
+            post_it.song_artist,
+
+        color=
+            post_it.color,
+
+        created_at=
+            post_it.created_at,
+
+        moderation=
+            get_public_moderation(
+                db,
+                post_it.user_id,
+            ),
     )
 
 
@@ -93,7 +141,9 @@ def create_post_it(
     response_model=list[PostItResponse],
 )
 def get_post_its(
-    user: User = Depends(require_verified_user),
+    user: User = Depends(
+        require_verified_user
+    ),
     db: Session = Depends(get_db),
 ):
     rows = db.execute(
@@ -103,10 +153,12 @@ def get_post_its(
         )
         .join(
             VerificationRequest,
-            VerificationRequest.user_id == PostIt.user_id,
+            VerificationRequest.user_id
+            == PostIt.user_id,
         )
         .where(
-            VerificationRequest.status == "verified"
+            VerificationRequest.status
+            == "verified"
         )
         .order_by(
             PostIt.created_at.desc()
@@ -133,24 +185,43 @@ def get_post_its(
 
         if (
             post_user is None
-            or post_user.account_status != "active"
+            or
+            post_user.account_status
+            != "active"
         ):
             continue
 
         post_its.append(
             PostItResponse(
                 id=post_it.id,
-                user_id=post_it.user_id,
-                display_name=post_it.display_name,
-                major=major,
-                fun_facts=post_it.fun_facts,
-                song_title=post_it.song_title,
-                song_artist=post_it.song_artist,
-                created_at=post_it.created_at,
-                moderation=get_public_moderation(
-                    db,
+                user_id=
                     post_it.user_id,
-                ),
+
+                display_name=
+                    post_it.display_name,
+
+                major=major,
+
+                fun_facts=
+                    post_it.fun_facts,
+
+                song_title=
+                    post_it.song_title,
+
+                song_artist=
+                    post_it.song_artist,
+
+                color=
+                    post_it.color,
+
+                created_at=
+                    post_it.created_at,
+
+                moderation=
+                    get_public_moderation(
+                        db,
+                        post_it.user_id,
+                    ),
             )
         )
 
@@ -162,7 +233,9 @@ def get_post_its(
     response_model=PostItResponse,
 )
 def get_my_post_it(
-    user: User = Depends(require_verified_user),
+    user: User = Depends(
+        require_verified_user
+    ),
     db: Session = Depends(get_db),
 ):
     row = db.execute(
@@ -172,18 +245,24 @@ def get_my_post_it(
         )
         .join(
             VerificationRequest,
-            VerificationRequest.user_id == PostIt.user_id,
+            VerificationRequest.user_id
+            == PostIt.user_id,
         )
         .where(
             PostIt.user_id == user.id,
-            VerificationRequest.status == "verified",
+
+            VerificationRequest.status
+            == "verified",
         )
     ).first()
 
     if row is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="You do not have a Post-it yet",
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail=(
+                "You do not have a Post-it yet"
+            ),
         )
 
     post_it, major = row
@@ -191,16 +270,32 @@ def get_my_post_it(
     return PostItResponse(
         id=post_it.id,
         user_id=post_it.user_id,
-        display_name=post_it.display_name,
+
+        display_name=
+            post_it.display_name,
+
         major=major,
-        fun_facts=post_it.fun_facts,
-        song_title=post_it.song_title,
-        song_artist=post_it.song_artist,
-        created_at=post_it.created_at,
-        moderation=get_public_moderation(
-            db,
-            post_it.user_id,
-        ),
+
+        fun_facts=
+            post_it.fun_facts,
+
+        song_title=
+            post_it.song_title,
+
+        song_artist=
+            post_it.song_artist,
+
+        color=
+            post_it.color,
+
+        created_at=
+            post_it.created_at,
+
+        moderation=
+            get_public_moderation(
+                db,
+                post_it.user_id,
+            ),
     )
 
 
@@ -210,7 +305,11 @@ def get_my_post_it(
 )
 def update_my_post_it(
     data: PostItUpdate,
-    user: User = Depends(require_verified_user),
+
+    user: User = Depends(
+        require_verified_user
+    ),
+
     db: Session = Depends(get_db),
 ):
     post_it = db.scalar(
@@ -221,20 +320,29 @@ def update_my_post_it(
 
     if post_it is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="You do not have a Post-it yet",
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail=(
+                "You do not have a Post-it yet"
+            ),
         )
 
     verification = db.scalar(
-        select(VerificationRequest).where(
-            VerificationRequest.user_id == user.id
+        select(
+            VerificationRequest
+        ).where(
+            VerificationRequest.user_id
+            == user.id
         )
     )
 
     if verification is None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Verification record not found",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Verification record not found"
+            ),
         )
 
     updates = data.model_dump(
@@ -248,11 +356,16 @@ def update_my_post_it(
 
         if not display_name:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Display name cannot be empty",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Display name cannot be empty"
+                ),
             )
 
-        post_it.display_name = display_name
+        post_it.display_name = (
+            display_name
+        )
 
     if "fun_facts" in updates:
         fun_facts = updates[
@@ -261,11 +374,16 @@ def update_my_post_it(
 
         if not fun_facts:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Fun facts cannot be empty",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Fun facts cannot be empty"
+                ),
             )
 
-        post_it.fun_facts = fun_facts
+        post_it.fun_facts = (
+            fun_facts
+        )
 
     if "song_title" in updates:
         song_title = updates[
@@ -274,11 +392,16 @@ def update_my_post_it(
 
         if not song_title:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Song title cannot be empty",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Song title cannot be empty"
+                ),
             )
 
-        post_it.song_title = song_title
+        post_it.song_title = (
+            song_title
+        )
 
     if "song_artist" in updates:
         song_artist = updates[
@@ -288,10 +411,22 @@ def update_my_post_it(
         if song_artist is None:
             post_it.song_artist = None
         else:
-            song_artist = song_artist.strip()
+            song_artist = (
+                song_artist.strip()
+            )
+
             post_it.song_artist = (
                 song_artist or None
             )
+
+    if (
+        "color" in updates
+        and updates["color"]
+        is not None
+    ):
+        post_it.color = (
+            updates["color"]
+        )
 
     db.commit()
     db.refresh(post_it)
@@ -299,14 +434,31 @@ def update_my_post_it(
     return PostItResponse(
         id=post_it.id,
         user_id=post_it.user_id,
-        display_name=post_it.display_name,
-        major=verification.major,
-        fun_facts=post_it.fun_facts,
-        song_title=post_it.song_title,
-        song_artist=post_it.song_artist,
-        created_at=post_it.created_at,
-        moderation=get_public_moderation(
-            db,
-            post_it.user_id,
-        ),
+
+        display_name=
+            post_it.display_name,
+
+        major=
+            verification.major,
+
+        fun_facts=
+            post_it.fun_facts,
+
+        song_title=
+            post_it.song_title,
+
+        song_artist=
+            post_it.song_artist,
+
+        color=
+            post_it.color,
+
+        created_at=
+            post_it.created_at,
+
+        moderation=
+            get_public_moderation(
+                db,
+                post_it.user_id,
+            ),
     )

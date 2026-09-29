@@ -3,8 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from backend.app.models.base import Base
 
@@ -15,10 +25,15 @@ if TYPE_CHECKING:
 class PostIt(Base):
     __tablename__ = "post_its"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
 
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
         unique=True,
         nullable=False,
     )
@@ -41,6 +56,13 @@ class PostIt(Base):
     song_artist: Mapped[str | None] = mapped_column(
         String(150),
         nullable=True,
+    )
+
+    color: Mapped[str] = mapped_column(
+        String(30),
+        default="yellow",
+        server_default="yellow",
+        nullable=False,
     )
 
     created_at: Mapped[datetime] = mapped_column(
