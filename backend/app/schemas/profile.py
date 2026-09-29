@@ -15,12 +15,24 @@ BackgroundStyle = Literal[
     "minimal",
 ]
 
+
 FontStyle = Literal[
     "arial",
     "georgia",
     "courier",
     "verdana",
     "pixel",
+]
+
+
+ClassYear = Literal[
+    "freshman",
+    "sophomore",
+    "junior",
+    "senior",
+    "graduate",
+    "other",
+    "prefer_not_to_say",
 ]
 
 
@@ -59,18 +71,45 @@ class ProfileUpdate(BaseModel):
         max_length=500,
     )
 
+    class_year: ClassYear | None = None
+
+    aspiration: str | None = Field(
+        default=None,
+        max_length=255,
+    )
+
+    looking_for: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    ask_me_about: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
+
+    current_obsession: str | None = Field(
+        default=None,
+        max_length=500,
+    )
+
     background_style: BackgroundStyle | None = None
     font_style: FontStyle | None = None
 
 
 class ProfileResponse(BaseModel):
-    moderation: PublicModerationNotice
     id: int
     user_id: int
 
     about_me: str | None
     interests: str | None
     favorite_quote: str | None
+
+    class_year: str | None
+    aspiration: str | None
+    looking_for: str | None
+    ask_me_about: str | None
+    current_obsession: str | None
 
     background_style: str | None
     font_style: str | None
@@ -88,6 +127,8 @@ class ProfileResponse(BaseModel):
 
 
 class PublicProfileResponse(BaseModel):
+    moderation: PublicModerationNotice
+
     user_id: int
     display_name: str
     major: str
@@ -95,6 +136,12 @@ class PublicProfileResponse(BaseModel):
     about_me: str | None
     interests: str | None
     favorite_quote: str | None
+
+    class_year: str | None
+    aspiration: str | None
+    looking_for: str | None
+    ask_me_about: str | None
+    current_obsession: str | None
 
     background_style: str | None
     font_style: str | None

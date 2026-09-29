@@ -1,6 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
@@ -33,6 +39,31 @@ class Profile(Base):
     )
 
     favorite_quote: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    class_year: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+
+    aspiration: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    looking_for: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    ask_me_about: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    current_obsession: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )

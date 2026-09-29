@@ -17,13 +17,13 @@ from sqlalchemy.orm import Session
 
 from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
+from backend.app.moderation import get_public_moderation
 from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
 from backend.app.models.profile_song import ProfileSong
 from backend.app.models.user import User
 from backend.app.models.verification import VerificationRequest
 from backend.app.routes.auth import require_verified_user
-from backend.app.moderation import get_public_moderation
 from backend.app.schemas.profile import (
     ProfileResponse,
     ProfileSongCreate,
@@ -88,6 +88,11 @@ def make_profile_response(
         about_me=profile.about_me,
         interests=profile.interests,
         favorite_quote=profile.favorite_quote,
+        class_year=profile.class_year,
+        aspiration=profile.aspiration,
+        looking_for=profile.looking_for,
+        ask_me_about=profile.ask_me_about,
+        current_obsession=profile.current_obsession,
         background_style=profile.background_style,
         font_style=profile.font_style,
         profile_picture_url=get_profile_picture_url(
@@ -227,6 +232,11 @@ def submit_my_profile(
             profile.about_me,
             profile.interests,
             profile.favorite_quote,
+            profile.class_year,
+            profile.aspiration,
+            profile.looking_for,
+            profile.ask_me_about,
+            profile.current_obsession,
             profile.background_style,
             profile.font_style,
             profile.profile_picture,
@@ -241,9 +251,11 @@ def submit_my_profile(
         )
 
     profile.status = "pending"
+
     profile.submitted_at = datetime.now(
         timezone.utc
     )
+
     profile.reviewed_at = None
     profile.admin_note = None
 
@@ -564,6 +576,7 @@ def get_public_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Profile not found",
         )
+
     target_user = db.get(
         User,
         user_id,
@@ -572,6 +585,7 @@ def get_public_profile(
     if (
         target_user is None
         or target_user.verification_status != "verified"
+        or target_user.account_status != "active"
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -625,15 +639,20 @@ def get_public_profile(
 
     return PublicProfileResponse(
         moderation=get_public_moderation(
-    db,
-    profile.user_id,
-),
+            db,
+            profile.user_id,
+        ),
         user_id=profile.user_id,
         display_name=post_it.display_name,
         major=verification.major,
         about_me=profile.about_me,
         interests=profile.interests,
         favorite_quote=profile.favorite_quote,
+        class_year=profile.class_year,
+        aspiration=profile.aspiration,
+        looking_for=profile.looking_for,
+        ask_me_about=profile.ask_me_about,
+        current_obsession=profile.current_obsession,
         background_style=profile.background_style,
         font_style=profile.font_style,
         profile_picture_url=get_profile_picture_url(
