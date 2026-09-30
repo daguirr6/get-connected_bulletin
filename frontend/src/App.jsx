@@ -8,6 +8,7 @@ import BulletinBoard from "./BulletinBoard";
 import ChatPage from "./ChatPage";
 import MyConnections from "./MyConnections";
 import MyProfile from "./MyProfile";
+import PrivacyPage from "./PrivacyPage";
 import PublicProfile from "./PublicProfile";
 import SafetyCenter from "./SafetyCenter";
 import VerifiedCelebration from "./VerifiedCelebration";
@@ -25,6 +26,12 @@ import "./App.css";
 function App() {
   const [mode, setMode] =
     useState("login");
+
+  const [showPrivacy, setShowPrivacy] =
+    useState(() =>
+      window.location.pathname ===
+      "/privacy"
+    );
 
   const [username, setUsername] =
     useState("");
@@ -78,6 +85,50 @@ function App() {
     selectedChat,
     setSelectedChat,
   ] = useState(null);
+
+
+  useEffect(() => {
+    function handlePopState() {
+      setShowPrivacy(
+        window.location.pathname ===
+          "/privacy"
+      );
+    }
+
+    window.addEventListener(
+      "popstate",
+      handlePopState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        handlePopState
+      );
+    };
+  }, []);
+
+
+  function openPrivacy() {
+    window.history.pushState(
+      {},
+      "",
+      "/privacy"
+    );
+
+    setShowPrivacy(true);
+  }
+
+
+  function closePrivacy() {
+    window.history.pushState(
+      {},
+      "",
+      "/"
+    );
+
+    setShowPrivacy(false);
+  }
 
 
   useEffect(() => {
@@ -330,6 +381,7 @@ function App() {
     setMajor("");
 
     setMessage("");
+    setShowPrivacy(false);
   }
 
 
@@ -350,6 +402,15 @@ function App() {
           </p>
         </section>
       </main>
+    );
+  }
+
+
+  if (showPrivacy) {
+    return (
+      <PrivacyPage
+        onBack={closePrivacy}
+      />
     );
   }
 
@@ -828,6 +889,22 @@ function App() {
             {message}
           </p>
         )}
+
+        <div className="site-legal-links">
+          <button
+            type="button"
+            onClick={openPrivacy}
+          >
+            Privacy & Site Information
+          </button>
+
+          <p>
+            Unofficial student-built
+            project. Not affiliated with
+            or endorsed by George Mason
+            University.
+          </p>
+        </div>
       </section>
     </main>
   );

@@ -18,6 +18,8 @@ import {
   reviewAppeal,
 } from "./appealsApi";
 
+import AdminCleanupPanel from "./AdminCleanupPanel";
+
 import "./AdminDashboard.css";
 
 
@@ -1078,6 +1080,11 @@ function AdminDashboard({
       </section>
 
 
+      <AdminCleanupPanel
+        token={token}
+      />
+
+
       {selectedProfile && (
         <div
           className="admin-review-backdrop"
@@ -1106,7 +1113,7 @@ function AdminDashboard({
                 setChangeNote("");
               }}
             >
-              ×
+              ├ù
             </button>
 
             <div className="admin-review-heading">
@@ -1333,7 +1340,7 @@ function AdminDashboard({
                             <strong>
                               {song.title}
                             </strong>{" "}
-                            — {song.artist}
+                            ΓÇö {song.artist}
                           </li>
                         )
                       )}
@@ -1427,7 +1434,7 @@ function AdminDashboard({
                 closeReportReview
               }
             >
-              ×
+              ├ù
             </button>
 
             <div className="admin-review-heading safety-heading">
@@ -1664,7 +1671,7 @@ function AdminDashboard({
                 closeAppealReview
               }
             >
-              ×
+              ├ù
             </button>
 
             <div className="admin-review-heading appeal-heading">

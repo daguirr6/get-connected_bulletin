@@ -1,0 +1,220 @@
+.privacy-page {
+  min-height: 100vh;
+
+  padding: 42px 20px 70px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 102, 51, 0.06),
+      rgba(255, 204, 51, 0.08)
+    ),
+    #f5f3e9;
+
+  color: #26342c;
+}
+
+
+.privacy-card {
+  width: 100%;
+  max-width: 900px;
+
+  margin: 0 auto;
+  padding: 38px;
+
+  background: #fffbea;
+
+  border: 2px solid #e7bd2f;
+  border-radius: 18px;
+
+  box-shadow:
+    0 12px 28px
+    rgba(28, 46, 35, 0.14);
+}
+
+
+.privacy-heading {
+  padding-bottom: 24px;
+
+  border-bottom:
+    1px solid #d8d0ae;
+}
+
+
+.privacy-heading h1 {
+  margin: 4px 0 12px;
+
+  color: #006633;
+
+  font-size: 40px;
+}
+
+
+.privacy-heading p,
+.privacy-section p,
+.privacy-grid p,
+.privacy-grid li,
+.privacy-disclaimer p {
+  color: #4d5a52;
+
+  line-height: 1.65;
+}
+
+
+.privacy-section {
+  margin-top: 28px;
+}
+
+
+.privacy-section h2 {
+  margin: 0 0 10px;
+
+  color: #006633;
+}
+
+
+.privacy-grid {
+  margin-top: 28px;
+
+  display: grid;
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+
+.privacy-grid article {
+  padding: 20px;
+
+  background: white;
+
+  border:
+    1px solid #d8d0ae;
+  border-radius: 14px;
+}
+
+
+.privacy-grid h3 {
+  margin: 4px 0 10px;
+
+  color: #006633;
+}
+
+
+.privacy-grid ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+
+
+.privacy-contact {
+  display: inline-block;
+
+  color: #006633;
+
+  font-weight: 900;
+}
+
+
+.privacy-safety-section {
+  padding: 18px;
+
+  border-left:
+    5px solid #f2c230;
+
+  background: #fff6c9;
+}
+
+
+.privacy-disclaimer {
+  margin-top: 30px;
+  padding: 18px;
+
+  background: #eef7f1;
+
+  border:
+    1px solid #b9d7c5;
+  border-radius: 12px;
+}
+
+
+.privacy-disclaimer strong {
+  color: #006633;
+}
+
+
+.privacy-back-button {
+  width: 100%;
+
+  margin-top: 28px;
+  padding: 13px 18px;
+
+  border: none;
+  border-radius: 999px;
+
+  background: #006633;
+
+  color: white;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.privacy-back-button:hover {
+  background: #004f28;
+}
+
+
+.site-legal-links {
+  margin-top: 22px;
+  padding-top: 18px;
+
+  border-top:
+    1px solid #d8d0ae;
+
+  text-align: center;
+}
+
+
+.site-legal-links button {
+  border: none;
+
+  background: transparent;
+
+  color: #006633;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-weight: 900;
+
+  text-decoration: underline;
+}
+
+
+.site-legal-links p {
+  margin: 9px 0 0;
+
+  color: #687069;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+
+@media (max-width: 700px) {
+  .privacy-card {
+    padding: 26px 20px;
+  }
+
+  .privacy-heading h1 {
+    font-size: 34px;
+  }
+
+  .privacy-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,237 @@
+.admin-cleanup-panel {
+  margin-top: 24px;
+}
+
+
+.admin-cleanup-explainer {
+  max-width: 650px;
+
+  margin: 8px 0 0;
+
+  color: #667068;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+
+.admin-cleanup-message,
+.admin-cleanup-error {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+
+  border-radius: 10px;
+}
+
+
+.admin-cleanup-message {
+  background: #eef7f1;
+
+  border-left:
+    4px solid #006633;
+
+  color: #294034;
+}
+
+
+.admin-cleanup-error {
+  background: #fff0f1;
+
+  border-left:
+    4px solid #a92d36;
+
+  color: #77242b;
+}
+
+
+.admin-cleanup-list {
+  display: grid;
+
+  gap: 14px;
+}
+
+
+.admin-cleanup-card {
+  padding: 19px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 24px;
+
+  background: white;
+
+  border:
+    1px solid #d8d3b4;
+  border-radius: 12px;
+}
+
+
+.admin-cleanup-card h3 {
+  margin: 2px 0 8px;
+
+  color: #006633;
+}
+
+
+.admin-cleanup-card p {
+  margin: 5px 0;
+}
+
+
+.admin-post-preview {
+  max-width: 650px;
+
+  color: #59625c;
+}
+
+
+.admin-danger-button,
+.admin-suspend-button,
+.admin-restore-button {
+  padding: 10px 15px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.admin-danger-button {
+  border:
+    2px solid #a92d36;
+
+  background: #fff0f1;
+
+  color: #872730;
+}
+
+
+.admin-suspend-button {
+  border:
+    2px solid #d9ae13;
+
+  background: #fff8d2;
+
+  color: #5f4d00;
+}
+
+
+.admin-restore-button {
+  border:
+    2px solid #006633;
+
+  background: #eef7f1;
+
+  color: #006633;
+}
+
+
+.admin-danger-button:disabled,
+.admin-suspend-button:disabled,
+.admin-restore-button:disabled {
+  opacity: 0.55;
+
+  cursor: wait;
+}
+
+
+.admin-user-search {
+  margin-bottom: 18px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  color: #344039;
+
+  font-weight: 800;
+}
+
+
+.admin-user-search input {
+  width: 100%;
+
+  padding: 11px 13px;
+
+  border:
+    1px solid #b9b593;
+  border-radius: 8px;
+
+  font: inherit;
+}
+
+
+.admin-account-heading {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+}
+
+
+.admin-account-status {
+  padding: 4px 9px;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  text-transform: uppercase;
+}
+
+
+.admin-account-active {
+  background: #e6f4ea;
+
+  color: #006633;
+}
+
+
+.admin-account-suspended {
+  background: #fff2b8;
+
+  color: #655310;
+}
+
+
+.admin-account-removed {
+  background: #ffe6e8;
+
+  color: #8a2730;
+}
+
+
+.admin-account-actions {
+  display: flex;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+
+@media (max-width: 760px) {
+  .admin-cleanup-card {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .admin-account-actions {
+    justify-content: stretch;
+  }
+
+  .admin-account-actions button,
+  .admin-danger-button {
+    width: 100%;
+  }
+}
