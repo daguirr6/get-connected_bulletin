@@ -1,112 +1,350 @@
 import {
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+
+import "./VerifiedCelebration.css";
+
+
+const confettiColors = [
+  "#006633",
+  "#f2c230",
+  "#ff8fb1",
+  "#8fd3ff",
+  "#c49cff",
+  "#ffb66e",
+  "#9be28f",
+];
 
 
 function VerifiedCelebration({
   username,
   onContinue,
 }) {
-  const audioRef = useRef(null);
+  const audioContextRef =
+    useRef(null);
 
-  const [showConfetti, setShowConfetti] =
-    useState(true);
+  const [soundPlayed, setSoundPlayed] =
+    useState(false);
 
   const [soundBlocked, setSoundBlocked] =
     useState(false);
 
 
-  useEffect(() => {
-    const audio = new Audio(
-      "/media/verified-cheer.mp3"
+  const confettiPieces =
+    useMemo(
+      () =>
+        Array.from(
+          { length: 90 },
+          (_, index) => ({
+            id: index,
+
+            left:
+              `${(index * 37) % 100}%`,
+
+            delay:
+              `${(index % 18) * 0.06}s`,
+
+            duration:
+              `${
+                3.2 +
+                (index % 8) * 0.22
+              }s`,
+
+            drift:
+              `${
+                ((index * 29) % 160) -
+                80
+              }px`,
+
+            spin:
+              `${
+                360 +
+                (index % 6) * 120
+              }deg`,
+
+            width:
+              `${7 + (index % 4) * 2}px`,
+
+            height:
+              `${11 + (index % 5) * 3}px`,
+
+            color:
+              confettiColors[
+                index %
+                  confettiColors.length
+              ],
+          })
+        ),
+      []
     );
 
-    audio.volume = 0.7;
-    audio.preload = "auto";
 
-    audioRef.current = audio;
+  const playCelebrationSound =
+    useCallback(
+      async () => {
+        try {
+          const AudioContextClass =
+            window.AudioContext ||
+            window.webkitAudioContext;
 
-    audio.play().catch(() => {
-      setSoundBlocked(true);
-    });
+          if (!AudioContextClass) {
+            setSoundBlocked(true);
 
-    const confettiTimer = setTimeout(() => {
-      setShowConfetti(false);
-    }, 3500);
+            return;
+          }
+
+          if (
+            audioContextRef.current &&
+            audioContextRef.current.state !==
+              "closed"
+          ) {
+            await audioContextRef.current.close();
+          }
+
+          const audioContext =
+            new AudioContextClass();
+
+          audioContextRef.current =
+            audioContext;
+
+          if (
+            audioContext.state ===
+            "suspended"
+          ) {
+            await audioContext.resume();
+          }
+
+          if (
+            audioContext.state !==
+            "running"
+          ) {
+            setSoundBlocked(true);
+
+            return;
+          }
+
+          const start =
+            audioContext.currentTime +
+            0.03;
+
+
+          const notes = [
+            {
+              frequency: 523.25,
+              offset: 0,
+              duration: 0.28,
+            },
+            {
+              frequency: 659.25,
+              offset: 0.12,
+              duration: 0.3,
+            },
+            {
+              frequency: 783.99,
+              offset: 0.24,
+              duration: 0.34,
+            },
+            {
+              frequency: 1046.5,
+              offset: 0.42,
+              duration: 0.55,
+            },
+          ];
+
+
+          notes.forEach(
+            ({
+              frequency,
+              offset,
+              duration,
+            }) => {
+              const oscillator =
+                audioContext
+                  .createOscillator();
+
+              const gain =
+                audioContext
+                  .createGain();
+
+              oscillator.type =
+                "sine";
+
+              oscillator.frequency
+                .setValueAtTime(
+                  frequency,
+                  start + offset
+                );
+
+              gain.gain
+                .setValueAtTime(
+                  0.0001,
+                  start + offset
+                );
+
+              gain.gain
+                .exponentialRampToValueAtTime(
+                  0.16,
+                  start +
+                    offset +
+                    0.025
+                );
+
+              gain.gain
+                .exponentialRampToValueAtTime(
+                  0.0001,
+                  start +
+                    offset +
+                    duration
+                );
+
+              oscillator.connect(
+                gain
+              );
+
+              gain.connect(
+                audioContext.destination
+              );
+
+              oscillator.start(
+                start + offset
+              );
+
+              oscillator.stop(
+                start +
+                  offset +
+                  duration
+              );
+            }
+          );
+
+
+          setSoundPlayed(true);
+          setSoundBlocked(false);
+
+        } catch {
+          setSoundBlocked(true);
+        }
+      },
+      []
+    );
+
+
+  useEffect(() => {
+    const timer =
+      window.setTimeout(
+        () => {
+          playCelebrationSound();
+        },
+        150
+      );
+
 
     return () => {
-      clearTimeout(confettiTimer);
+      window.clearTimeout(
+        timer
+      );
 
-      audio.pause();
-      audio.currentTime = 0;
+      if (
+        audioContextRef.current &&
+        audioContextRef.current.state !==
+          "closed"
+      ) {
+        audioContextRef.current.close();
+      }
     };
-  }, []);
-
-
-  function playCelebrationSound() {
-    if (!audioRef.current) {
-      return;
-    }
-
-    audioRef.current.currentTime = 0;
-
-    audioRef.current
-      .play()
-      .then(() => {
-        setSoundBlocked(false);
-      })
-      .catch(() => {
-        setSoundBlocked(true);
-      });
-  }
+  }, [playCelebrationSound]);
 
 
   return (
-    <main className="celebration-page">
-      {showConfetti && (
-        <img
-          className="verification-confetti"
-          src="/media/verified-confetti.gif"
-          alt=""
-        />
-      )}
+    <main className="verified-celebration-page">
+      <div
+        className="verified-confetti-layer"
+        aria-hidden="true"
+      >
+        {confettiPieces.map(
+          (piece) => (
+            <span
+              key={piece.id}
+              className="verified-confetti-piece"
+              style={{
+                "--confetti-left":
+                  piece.left,
 
-      <section className="celebration-card">
-        <p className="small-title">
-          GET CONNECTED
-        </p>
+                "--confetti-delay":
+                  piece.delay,
 
-        <h1>You&apos;re verified!</h1>
+                "--confetti-duration":
+                  piece.duration,
 
-        <p className="celebration-message">
-          Welcome, {username}!
-        </p>
+                "--confetti-drift":
+                  piece.drift,
 
-        <p className="celebration-text">
-          Your student account has officially
-          been verified.
-        </p>
+                "--confetti-spin":
+                  piece.spin,
 
-        <p className="celebration-text">
-          You can now create your Post-it,
-          meet other students, and start
-          making connections around campus!
-        </p>
+                "--confetti-width":
+                  piece.width,
 
-        {soundBlocked && (
-          <button
-            className="sound-button"
-            type="button"
-            onClick={playCelebrationSound}
-          >
-            Play celebration sound
-          </button>
+                "--confetti-height":
+                  piece.height,
+
+                "--confetti-color":
+                  piece.color,
+              }}
+            />
+          )
         )}
+      </div>
+
+
+      <section className="verified-celebration-card">
+        <p className="verified-small-title">
+          YOU&apos;RE VERIFIED!
+        </p>
+
+        <h1>
+          Welcome to Get Connected!
+        </h1>
+
+        <p className="verified-name">
+          Hey {username}!
+        </p>
+
+        <p className="verified-text">
+          Your student verification
+          has been approved.
+        </p>
+
+        <p className="verified-text">
+          You can now create your
+          Post-it, customize your
+          profile, discover students
+          with shared interests, and
+          start making connections.
+        </p>
+
 
         <button
-          className="main-button"
+          className="verified-sound-button"
+          type="button"
+          onClick={
+            playCelebrationSound
+          }
+        >
+          {soundBlocked
+            ? "🔊 Play Celebration Sound"
+            : soundPlayed
+              ? "🔊 Replay Celebration Sound"
+              : "🔊 Play Celebration Sound"}
+        </button>
+
+
+        <button
+          className="verified-continue-button"
           type="button"
           onClick={onContinue}
         >

@@ -273,7 +273,12 @@ function App() {
         );
 
       setMessage(
-        data.message
+        "Account created! Student verification is done manually. " +
+        "An admin checks the legal name and major you submitted. " +
+        "During active hours this may take only a few minutes; " +
+        "if you sign up late at night or while the admin is unavailable, " +
+        "it may take longer. You can log in immediately to check your status. " +
+        "No email address, Mason password, or Duo code is required."
       );
 
       setMode("login");
@@ -281,6 +286,62 @@ function App() {
       setPassword("");
       setFullName("");
       setMajor("");
+    } catch (error) {
+      setMessage(
+        error.message
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+  async function refreshVerificationStatus() {
+    if (!authToken) {
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const user =
+        await getCurrentUser(
+          authToken
+        );
+
+      setCurrentUser(user);
+
+      const shouldCelebrate =
+        user.role !== "admin" &&
+        user.verification_status ===
+          "verified" &&
+        user.verification_welcome_seen ===
+          false;
+
+      setShowCelebration(
+        shouldCelebrate
+      );
+
+      if (
+        user.verification_status ===
+        "pending"
+      ) {
+        setMessage(
+          "Your verification is still pending. " +
+          "An admin will manually check your name and major. " +
+          "Please check again in a little while."
+        );
+      }
+
+      if (
+        user.verification_status ===
+        "needs_info"
+      ) {
+        setMessage(
+          "The admin needs a little more information before your verification can be completed."
+        );
+      }
     } catch (error) {
       setMessage(
         error.message
@@ -469,12 +530,38 @@ function App() {
 
             <p>
               Your account was created
-              successfully.
+              successfully!
             </p>
 
             <p>
-              Your student information is
-              currently waiting for
+              Verification is completed
+              manually by the Get Connected
+              admin using the legal name and
+              major you submitted.
+            </p>
+
+            <p>
+              During active hours this may
+              take only a few minutes. If
+              you signed up late at night
+              or while the admin is
+              unavailable, it may take
+              longer.
+            </p>
+
+            <p>
+              You can stay logged in and
+              press the button below to
+              check whether your account
+              has been approved.
+            </p>
+
+            <p className="privacy-note">
+              Get Connected does not need
+              your GMU email, personal
+              email, Mason password, Duo
+              code, or any other university
+              login credentials for
               verification.
             </p>
 
@@ -484,6 +571,19 @@ function App() {
 
             <button
               className="main-button"
+              type="button"
+              disabled={loading}
+              onClick={
+                refreshVerificationStatus
+              }
+            >
+              {loading
+                ? "Checking..."
+                : "Check Verification Status"}
+            </button>
+
+            <button
+              className="sound-button"
               type="button"
               onClick={
                 handleLogout

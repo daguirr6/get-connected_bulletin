@@ -1,0 +1,262 @@
+.verified-celebration-page {
+  min-height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  padding: 40px 20px;
+
+  position: relative;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(0, 102, 51, 0.06),
+      rgba(242, 194, 48, 0.1)
+    ),
+    #f5f3e9;
+}
+
+
+.verified-confetti-layer {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 10;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+
+.verified-confetti-piece {
+  position: absolute;
+
+  top: -30px;
+  left: var(--confetti-left);
+
+  width:
+    var(--confetti-width);
+
+  height:
+    var(--confetti-height);
+
+  background:
+    var(--confetti-color);
+
+  border-radius: 2px;
+
+  opacity: 0.95;
+
+  animation:
+    verified-confetti-fall
+    var(--confetti-duration)
+    linear
+    var(--confetti-delay)
+    both;
+}
+
+
+.verified-confetti-piece:nth-child(3n) {
+  border-radius: 50%;
+}
+
+
+.verified-confetti-piece:nth-child(4n) {
+  transform: rotate(45deg);
+}
+
+
+@keyframes verified-confetti-fall {
+  0% {
+    transform:
+      translate3d(
+        0,
+        -10vh,
+        0
+      )
+      rotate(0deg);
+
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate3d(
+        var(--confetti-drift),
+        115vh,
+        0
+      )
+      rotate(
+        var(--confetti-spin)
+      );
+
+    opacity: 0;
+  }
+}
+
+
+.verified-celebration-card {
+  width: 100%;
+  max-width: 520px;
+
+  padding: 44px 40px;
+
+  position: relative;
+
+  z-index: 20;
+
+  border:
+    2px solid #e7bd2f;
+
+  border-radius: 18px;
+
+  background: #fffbea;
+
+  box-shadow:
+    0 18px 45px
+    rgba(28, 46, 35, 0.2);
+
+  text-align: center;
+}
+
+
+.verified-celebration-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 30px;
+  right: 30px;
+
+  height: 5px;
+
+  border-radius:
+    0 0 5px 5px;
+
+  background: #f2c230;
+}
+
+
+.verified-small-title {
+  margin:
+    0 0 10px;
+
+  color: #006633;
+
+  font-size: 13px;
+  font-weight: 900;
+
+  letter-spacing: 2px;
+}
+
+
+.verified-celebration-card h1 {
+  margin:
+    0 0 12px;
+
+  color: #006633;
+
+  font-size: 40px;
+  line-height: 1.08;
+}
+
+
+.verified-name {
+  margin:
+    0 0 20px;
+
+  color: #4c554f;
+
+  font-size: 18px;
+  font-weight: 800;
+}
+
+
+.verified-text {
+  max-width: 410px;
+
+  margin:
+    0 auto 13px;
+
+  color: #465149;
+
+  line-height: 1.6;
+}
+
+
+.verified-sound-button,
+.verified-continue-button {
+  width: 100%;
+
+  padding:
+    12px 18px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font-weight: 900;
+}
+
+
+.verified-sound-button {
+  margin-top: 17px;
+
+  border:
+    2px solid #e7bd2f;
+
+  background: #fff4bd;
+
+  color: #574816;
+}
+
+
+.verified-sound-button:hover {
+  background: #ffed92;
+}
+
+
+.verified-continue-button {
+  margin-top: 11px;
+
+  border: none;
+
+  background: #006633;
+
+  color: white;
+}
+
+
+.verified-continue-button:hover {
+  background: #004f28;
+}
+
+
+@media (max-width: 600px) {
+  .verified-celebration-page {
+    padding:
+      20px 14px;
+  }
+
+  .verified-celebration-card {
+    padding:
+      36px 23px;
+
+    border-radius: 14px;
+  }
+
+  .verified-celebration-card h1 {
+    font-size: 34px;
+  }
+}
