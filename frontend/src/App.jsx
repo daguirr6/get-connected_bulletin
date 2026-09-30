@@ -698,7 +698,7 @@ function App() {
       <section className="auth-card">
         <div className="intro">
           <p className="small-title">
-            GEORGE MASON UNIVERSITY
+            A STUDENT-BUILT MASON COMMUNITY
           </p>
 
           <h1>
@@ -706,10 +706,30 @@ function App() {
           </h1>
 
           <p className="description">
-            Meet students. Share a little
-            about yourself. Find people
-            around campus you might never
-            have met otherwise.
+            Meet students, discover shared
+            interests, and connect with people
+            around campus you might never have
+            met otherwise.
+          </p>
+
+          <p className="privacy-note">
+            <strong>
+              Unofficial student project.
+            </strong>{" "}
+            Get Connected is not affiliated
+            with or endorsed by George Mason
+            University.
+          </p>
+
+          <p className="privacy-note">
+            <strong>
+              Independent login:
+            </strong>{" "}
+            Get Connected uses its own
+            username and password system.
+            Never enter your Mason password,
+            Duo code, or other university
+            login credentials here.
           </p>
         </div>
 
@@ -755,7 +775,7 @@ function App() {
             }
           >
             <label>
-              Username
+              Get Connected username
 
               <input
                 type="text"
@@ -770,7 +790,7 @@ function App() {
             </label>
 
             <label>
-              Password
+              Get Connected password
 
               <input
                 type="password"
@@ -802,7 +822,7 @@ function App() {
             }
           >
             <label>
-              Username
+              Get Connected username
 
               <input
                 type="text"
@@ -817,7 +837,7 @@ function App() {
             </label>
 
             <label>
-              Password
+              Get Connected password
 
               <input
                 type="password"
@@ -862,13 +882,24 @@ function App() {
             </label>
 
             <p className="privacy-note">
-              Your legal name is only used
-              for GMU verification and
-              won&apos;t be shown on your
-              public profile. Your safety
-              and privacy will always be
-              one of our highest
-              priorities!
+              <strong>
+                Student verification:
+              </strong>{" "}
+              We only ask for your full legal
+              name and major during student
+              verification. Your legal name
+              stays private and is never shown
+              to other students. Your major is
+              shown only to other verified
+              Get Connected students after
+              approval.
+              <br />
+              <br />
+              You do not need to provide a
+              GMU email address, personal
+              email address, Mason password,
+              Duo code, or any other
+              university login credentials.
             </p>
 
             <button
