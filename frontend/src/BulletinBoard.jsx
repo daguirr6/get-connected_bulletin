@@ -14,14 +14,262 @@ import {
   updateMyPostIt,
 } from "./api";
 
+import "./BulletinBoard.css";
 
-const stickyClasses = [
-  "sticky-yellow",
-  "sticky-pink",
-  "sticky-blue",
-  "sticky-green",
-  "sticky-orange",
+
+const PAGE_SIZE = 25;
+const DESKTOP_COLUMNS = 5;
+
+
+const postItColors = [
+  {
+    value: "yellow",
+    label: "Yellow",
+  },
+  {
+    value: "lime",
+    label: "Lime",
+  },
+  {
+    value: "sky",
+    label: "Sky Blue",
+  },
+  {
+    value: "pink",
+    label: "Pink",
+  },
+  {
+    value: "purple",
+    label: "Purple",
+  },
+  {
+    value: "peach",
+    label: "Peach",
+  },
+  {
+    value: "mint",
+    label: "Mint",
+  },
 ];
+
+
+function hashString(value) {
+  let hash = 2166136261;
+
+  for (
+    let index = 0;
+    index < value.length;
+    index += 1
+  ) {
+    hash ^= value.charCodeAt(index);
+
+    hash = Math.imul(
+      hash,
+      16777619
+    );
+  }
+
+  return hash >>> 0;
+}
+
+
+function createRandom(seed) {
+  let value = seed >>> 0;
+
+  return function random() {
+    value += 0x6d2b79f5;
+
+    let result = value;
+
+    result = Math.imul(
+      result ^ (result >>> 15),
+      result | 1
+    );
+
+    result ^=
+      result +
+      Math.imul(
+        result ^ (result >>> 7),
+        result | 61
+      );
+
+    return (
+      (
+        result ^
+        (result >>> 14)
+      ) >>> 0
+    ) / 4294967296;
+  };
+}
+
+
+function shuffleWithSeed(
+  items,
+  seed
+) {
+  const shuffled = [
+    ...items,
+  ];
+
+  const random =
+    createRandom(seed);
+
+  for (
+    let index =
+      shuffled.length - 1;
+    index > 0;
+    index -= 1
+  ) {
+    const randomIndex =
+      Math.floor(
+        random() *
+          (index + 1)
+      );
+
+    [
+      shuffled[index],
+      shuffled[randomIndex],
+    ] = [
+      shuffled[randomIndex],
+      shuffled[index],
+    ];
+  }
+
+  return shuffled;
+}
+
+
+function getBoardSeed(
+  token
+) {
+  const tokenHash =
+    String(
+      hashString(token || "")
+    );
+
+  const savedTokenHash =
+    sessionStorage.getItem(
+      "get_connected_board_token"
+    );
+
+  const savedSeed =
+    sessionStorage.getItem(
+      "get_connected_board_seed"
+    );
+
+  if (
+    savedTokenHash === tokenHash &&
+    savedSeed
+  ) {
+    return Number(savedSeed);
+  }
+
+  const newSeed =
+    Math.floor(
+      Math.random() *
+        2147483647
+    );
+
+  sessionStorage.setItem(
+    "get_connected_board_token",
+    tokenHash
+  );
+
+  sessionStorage.setItem(
+    "get_connected_board_seed",
+    String(newSeed)
+  );
+
+  return newSeed;
+}
+
+
+function createPlacements(
+  count,
+  rows,
+  seed
+) {
+  const slotCount =
+    rows *
+    DESKTOP_COLUMNS;
+
+  const slots =
+    Array.from(
+      {
+        length: slotCount,
+      },
+      (_, index) => index
+    );
+
+  const shuffledSlots =
+    shuffleWithSeed(
+      slots,
+      seed
+    );
+
+  return Array.from(
+    {
+      length: count,
+    },
+    (_, index) => {
+      const slot =
+        shuffledSlots[index];
+
+      const column =
+        slot %
+        DESKTOP_COLUMNS;
+
+      const row =
+        Math.floor(
+          slot /
+          DESKTOP_COLUMNS
+        );
+
+      const random =
+        createRandom(
+          seed +
+          index * 104729
+        );
+
+      const horizontalJitter =
+        Math.round(
+          random() * 14 - 7
+        );
+
+      const verticalJitter =
+        Math.round(
+          random() * 24 - 12
+        );
+
+      const rotation =
+        (
+          random() * 5 - 2.5
+        ).toFixed(2);
+
+      const zIndex =
+        1 +
+        Math.floor(
+          random() * 3
+        );
+
+      return {
+        left:
+          column * 20 + 1.5,
+
+        top:
+          row * 232 +
+          18 +
+          verticalJitter,
+
+        horizontalJitter,
+
+        rotation,
+
+        zIndex,
+      };
+    }
+  );
+}
 
 
 function BulletinBoard({
@@ -58,78 +306,206 @@ function BulletinBoard({
     setConnectingUserId,
   ] = useState(null);
 
-  const [displayName, setDisplayName] =
-    useState("");
+  const [
+    currentPage,
+    setCurrentPage,
+  ] = useState(1);
 
-  const [funFacts, setFunFacts] =
-    useState("");
+  const [
+    displayName,
+    setDisplayName,
+  ] = useState("");
 
-  const [songTitle, setSongTitle] =
-    useState("");
+  const [
+    funFacts,
+    setFunFacts,
+  ] = useState("");
 
-  const [songArtist, setSongArtist] =
-    useState("");
+  const [
+    songTitle,
+    setSongTitle,
+  ] = useState("");
+
+  const [
+    songArtist,
+    setSongArtist,
+  ] = useState("");
+
+  const [
+    color,
+    setColor,
+  ] = useState("yellow");
 
 
-  const connectedUserIds = useMemo(
-    () =>
-      new Set(
-        connections.map(
-          (connection) =>
-            connection.user_id
-        )
-      ),
-    [connections]
-  );
+  const boardSeed =
+    useMemo(
+      () =>
+        getBoardSeed(token),
+      [token]
+    );
 
 
-  const loadBulletin = useCallback(
-    async () => {
-      setLoading(true);
-      setMessage("");
+  const connectedUserIds =
+    useMemo(
+      () =>
+        new Set(
+          connections.map(
+            (connection) =>
+              connection.user_id
+          )
+        ),
+      [connections]
+    );
 
-      try {
-        const [
-          boardData,
-          myPostData,
-          connectionData,
-        ] = await Promise.all([
-          getPostIts(token),
-          getMyPostIt(token),
-          getConnections(token),
-        ]);
 
-        setPostIts(boardData);
-        setMyPostIt(myPostData);
-        setConnections(connectionData);
+  const shuffledPostIts =
+    useMemo(
+      () =>
+        shuffleWithSeed(
+          postIts,
+          boardSeed
+        ),
+      [
+        postIts,
+        boardSeed,
+      ]
+    );
 
-        if (myPostData) {
-          setDisplayName(
-            myPostData.display_name
-          );
 
-          setFunFacts(
-            myPostData.fun_facts
-          );
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        shuffledPostIts.length /
+          PAGE_SIZE
+      )
+    );
 
-          setSongTitle(
-            myPostData.song_title
-          );
 
-          setSongArtist(
-            myPostData.song_artist || ""
-          );
-        }
-      } catch (error) {
-        setMessage(
-          error.message
+  const visiblePostIts =
+    useMemo(
+      () => {
+        const start =
+          (currentPage - 1) *
+          PAGE_SIZE;
+
+        return shuffledPostIts.slice(
+          start,
+          start +
+            PAGE_SIZE
         );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token]
-  );
+      },
+      [
+        shuffledPostIts,
+        currentPage,
+      ]
+    );
+
+
+  const layoutRows =
+    Math.max(
+      2,
+      Math.ceil(
+        Math.max(
+          visiblePostIts.length,
+          1
+        ) /
+          DESKTOP_COLUMNS
+      )
+    );
+
+
+  const placements =
+    useMemo(
+      () =>
+        createPlacements(
+          visiblePostIts.length,
+          layoutRows,
+          boardSeed +
+            currentPage *
+              7919
+        ),
+      [
+        visiblePostIts.length,
+        layoutRows,
+        boardSeed,
+        currentPage,
+      ]
+    );
+
+
+  const boardStageHeight =
+    layoutRows *
+      232 +
+    45;
+
+
+  const loadBulletin =
+    useCallback(
+      async () => {
+        setLoading(true);
+        setMessage("");
+
+        try {
+          const [
+            boardData,
+            myPostData,
+            connectionData,
+          ] = await Promise.all([
+            getPostIts(token),
+            getMyPostIt(token),
+            getConnections(token),
+          ]);
+
+          setPostIts(
+            boardData
+          );
+
+          setMyPostIt(
+            myPostData
+          );
+
+          setConnections(
+            connectionData
+          );
+
+          if (myPostData) {
+            setDisplayName(
+              myPostData
+                .display_name
+            );
+
+            setFunFacts(
+              myPostData
+                .fun_facts
+            );
+
+            setSongTitle(
+              myPostData
+                .song_title
+            );
+
+            setSongArtist(
+              myPostData
+                .song_artist ||
+                ""
+            );
+
+            setColor(
+              myPostData.color ||
+                "yellow"
+            );
+          }
+        } catch (error) {
+          setMessage(
+            error.message
+          );
+        } finally {
+          setLoading(false);
+        }
+      },
+      [token]
+    );
 
 
   useEffect(() => {
@@ -137,11 +513,27 @@ function BulletinBoard({
   }, [loadBulletin]);
 
 
+  useEffect(() => {
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+
   function openCreateForm() {
     setDisplayName("");
     setFunFacts("");
     setSongTitle("");
     setSongArtist("");
+    setColor("yellow");
 
     setShowForm(true);
     setMessage("");
@@ -166,7 +558,13 @@ function BulletinBoard({
     );
 
     setSongArtist(
-      myPostIt.song_artist || ""
+      myPostIt.song_artist ||
+        ""
+    );
+
+    setColor(
+      myPostIt.color ||
+        "yellow"
     );
 
     setShowForm(true);
@@ -193,7 +591,10 @@ function BulletinBoard({
         songTitle.trim(),
 
       song_artist:
-        songArtist.trim() || null,
+        songArtist.trim() ||
+        null,
+
+      color,
     };
 
     try {
@@ -282,7 +683,9 @@ function BulletinBoard({
         );
       }
     } finally {
-      setConnectingUserId(null);
+      setConnectingUserId(
+        null
+      );
     }
   }
 
@@ -292,15 +695,15 @@ function BulletinBoard({
   ) {
     if (
       !postIt.moderation ||
-      postIt.moderation.level ===
-        "none"
+      postIt.moderation
+        .level === "none"
     ) {
       return null;
     }
 
     if (
-      postIt.moderation.level ===
-      "yellow"
+      postIt.moderation
+        .level === "yellow"
     ) {
       return (
         <div className="safety-notice safety-yellow">
@@ -310,8 +713,8 @@ function BulletinBoard({
     }
 
     if (
-      postIt.moderation.level ===
-      "red"
+      postIt.moderation
+        .level === "red"
     ) {
       return (
         <div className="safety-notice safety-red">
@@ -324,10 +727,42 @@ function BulletinBoard({
   }
 
 
+  function goToPage(
+    page
+  ) {
+    const nextPage =
+      Math.min(
+        totalPages,
+        Math.max(
+          1,
+          page
+        )
+      );
+
+    setCurrentPage(
+      nextPage
+    );
+
+    window.setTimeout(
+      () => {
+        document
+          .querySelector(
+            ".corkboard"
+          )
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      },
+      30
+    );
+  }
+
+
   return (
     <main className="bulletin-page">
-      <header className="bulletin-header">
-        <div>
+      <header className="bulletin-hero">
+        <div className="bulletin-hero-title-group">
           <p className="small-title">
             GEORGE MASON UNIVERSITY
           </p>
@@ -336,14 +771,34 @@ function BulletinBoard({
             Get Connected
           </h1>
 
-          <p>
-            Welcome to the campus bulletin.
+          <p className="bulletin-subtitle">
+            Campus Bulletin
           </p>
         </div>
 
-        <div className="bulletin-header-actions">
+
+        <nav className="bulletin-main-nav">
           <button
-            className="header-button gold"
+            className="bulletin-nav-item active"
+            type="button"
+            disabled
+          >
+            Bulletin
+          </button>
+
+          <button
+            className="bulletin-nav-item"
+            type="button"
+            onClick={
+              onOpenConnections
+            }
+          >
+            Connections (
+            {connections.length})
+          </button>
+
+          <button
+            className="bulletin-nav-item"
             type="button"
             onClick={
               onOpenMyProfile
@@ -353,18 +808,7 @@ function BulletinBoard({
           </button>
 
           <button
-            className="header-button"
-            type="button"
-            onClick={
-              onOpenConnections
-            }
-          >
-            My Connections (
-            {connections.length})
-          </button>
-
-          <button
-            className="header-button"
+            className="bulletin-nav-item"
             type="button"
             onClick={
               onOpenSafetyCenter
@@ -373,36 +817,28 @@ function BulletinBoard({
             Safety & Appeals
           </button>
 
-          {myPostIt ? (
-            <button
-              className="header-button"
-              type="button"
-              onClick={
-                openEditForm
-              }
-            >
-              Edit My Post-it
-            </button>
-          ) : (
-            <button
-              className="header-button gold"
-              type="button"
-              onClick={
-                openCreateForm
-              }
-            >
-              Create My Post-it
-            </button>
-          )}
+          <button
+            className="bulletin-nav-item"
+            type="button"
+            onClick={
+              myPostIt
+                ? openEditForm
+                : openCreateForm
+            }
+          >
+            {myPostIt
+              ? "Edit Post-it"
+              : "Create Post-it"}
+          </button>
 
           <button
-            className="header-button secondary"
+            className="bulletin-nav-item logout"
             type="button"
             onClick={onLogout}
           >
             Log Out
           </button>
-        </div>
+        </nav>
       </header>
 
 
@@ -413,51 +849,60 @@ function BulletinBoard({
       )}
 
 
-      {!myPostIt && !loading && (
-        <section className="first-post-banner">
-          <div>
-            <p className="small-title">
-              YOUR TURN
-            </p>
+      {!myPostIt &&
+        !loading && (
+          <section className="first-post-banner">
+            <div>
+              <p className="small-title">
+                YOUR TURN
+              </p>
 
-            <h2>
-              Pin yourself to the board!
-            </h2>
+              <h2>
+                Pin yourself to the
+                board!
+              </h2>
 
-            <p>
-              Make your Post-it before
-              connecting with other
-              students.
-            </p>
-          </div>
+              <p>
+                Make your Post-it
+                before connecting with
+                other students.
+              </p>
+            </div>
 
-          <button
-            className="main-button compact-button"
-            type="button"
-            onClick={
-              openCreateForm
-            }
-          >
-            Create My Post-it
-          </button>
-        </section>
-      )}
+            <button
+              className="main-button compact-button"
+              type="button"
+              onClick={
+                openCreateForm
+              }
+            >
+              Create My Post-it
+            </button>
+          </section>
+        )}
 
 
       <section className="corkboard">
-        <div className="board-title">
-          <span className="push-pin">
-          </span>
+        <div className="bulletin-board-top">
+          <div className="board-paper-label">
+            <span className="push-pin">
+            </span>
 
-          <div>
-            <h2>
-              Campus Bulletin
-            </h2>
+            <div>
+              <strong>
+                Campus Bulletin
+              </strong>
 
-            <p>
-              A little glimpse of the
-              people around you.
-            </p>
+              <span>
+                {shuffledPostIts.length}{" "}
+                student
+                {shuffledPostIts.length ===
+                1
+                  ? ""
+                  : "s"}{" "}
+                pinned up
+              </span>
+            </div>
           </div>
         </div>
 
@@ -466,174 +911,264 @@ function BulletinBoard({
           <div className="board-empty">
             Loading the bulletin...
           </div>
-        ) : postIts.length === 0 ? (
+        ) : shuffledPostIts.length ===
+          0 ? (
           <div className="board-empty">
             <h3>
-              The board is waiting for
-              its first Post-it.
+              The board is waiting
+              for its first Post-it.
             </h3>
 
             <p>
-              Be the first student to
-              pin something up!
+              Be the first student
+              to pin something up!
             </p>
           </div>
         ) : (
-          <div className="post-it-grid">
-            {postIts.map(
-              (postIt, index) => {
-                const isMine =
-                  postIt.user_id ===
-                  currentUser.id;
+          <>
+            <div
+              className="post-it-stage"
+              style={{
+                "--board-stage-height":
+                  `${boardStageHeight}px`,
+              }}
+            >
+              {visiblePostIts.map(
+                (
+                  postIt,
+                  index
+                ) => {
+                  const placement =
+                    placements[index];
 
-                const isConnected =
-                  connectedUserIds.has(
-                    postIt.user_id
-                  );
+                  const isMine =
+                    postIt.user_id ===
+                    currentUser.id;
 
-                const isConnecting =
-                  connectingUserId ===
-                  postIt.user_id;
+                  const isConnected =
+                    connectedUserIds.has(
+                      postIt.user_id
+                    );
 
-                const stickyClass =
-                  stickyClasses[
-                    index %
-                    stickyClasses.length
-                  ];
+                  const isConnecting =
+                    connectingUserId ===
+                    postIt.user_id;
 
-                let connectText =
-                  "Get Connected!";
+                  let connectText =
+                    "Get Connected!";
 
-                if (!myPostIt) {
-                  connectText =
-                    "Create your Post-it first";
-                } else if (
-                  isConnecting
-                ) {
-                  connectText =
-                    "Connecting...";
-                } else if (
-                  isConnected
-                ) {
-                  connectText =
-                    "Connected";
-                }
+                  if (!myPostIt) {
+                    connectText =
+                      "Create yours first";
+                  } else if (
+                    isConnecting
+                  ) {
+                    connectText =
+                      "Connecting...";
+                  } else if (
+                    isConnected
+                  ) {
+                    connectText =
+                      "Connected";
+                  }
+
+                  const noteColor =
+                    postIt.color ||
+                    "yellow";
 
 
-                return (
-                  <article
-                    className={
-                      `student-post-it ${stickyClass} ` +
-                      `tilt-${index % 5} ` +
-                      (
-                        postIt.moderation
-                          ?.level === "yellow"
-                          ? "moderation-yellow"
-                          : ""
-                      ) +
-                      " " +
-                      (
-                        postIt.moderation
-                          ?.level === "red"
-                          ? "moderation-red"
-                          : ""
-                      )
-                    }
-                    key={postIt.id}
-                  >
-                    <span className="post-pin">
-                    </span>
-
-                    {isMine && (
-                      <span className="your-post-badge">
-                        Your Post-it
-                      </span>
-                    )}
-
-                    {safetyLabel(
-                      postIt
-                    )}
-
-                    <h3>
-                      {
-                        postIt.display_name
+                  return (
+                    <article
+                      className={
+                        `student-post-it ` +
+                        `post-color-${noteColor} ` +
+                        (
+                          postIt
+                            .moderation
+                            ?.level ===
+                          "yellow"
+                            ? "moderation-yellow "
+                            : ""
+                        ) +
+                        (
+                          postIt
+                            .moderation
+                            ?.level ===
+                          "red"
+                            ? "moderation-red"
+                            : ""
+                        )
                       }
-                    </h3>
+                      key={
+                        postIt.id
+                      }
+                      style={{
+                        "--note-left":
+                          `calc(${placement.left}% + ${placement.horizontalJitter}px)`,
 
-                    <p className="post-major">
-                      {postIt.major}
-                    </p>
+                        "--note-top":
+                          `${placement.top}px`,
 
-                    <div className="post-divider">
-                    </div>
+                        "--note-rotation":
+                          `${placement.rotation}deg`,
 
-                    <p className="post-facts">
-                      {postIt.fun_facts}
-                    </p>
-
-                    <div className="post-song">
-                      <span className="music-note">
-                        ♪
+                        "--note-z":
+                          placement.zIndex,
+                      }}
+                    >
+                      <span className="post-pin">
                       </span>
 
-                      <div>
-                        <strong>
-                          {
-                            postIt.song_title
-                          }
-                        </strong>
+                      {isMine && (
+                        <span className="your-post-badge">
+                          Yours
+                        </span>
+                      )}
 
-                        {postIt.song_artist && (
-                          <span>
-                            {
-                              postIt.song_artist
-                            }
-                          </span>
-                        )}
+                      {safetyLabel(
+                        postIt
+                      )}
+
+                      <h3>
+                        {
+                          postIt
+                            .display_name
+                        }
+                      </h3>
+
+                      <p className="post-major">
+                        {
+                          postIt.major
+                        }
+                      </p>
+
+                      <div className="post-divider">
                       </div>
-                    </div>
+
+                      <p className="post-facts">
+                        {
+                          postIt
+                            .fun_facts
+                        }
+                      </p>
+
+                      <div className="post-song">
+                        <span className="music-note">
+                          ♪
+                        </span>
+
+                        <div>
+                          <strong>
+                            {
+                              postIt
+                                .song_title
+                            }
+                          </strong>
+
+                          {postIt
+                            .song_artist && (
+                            <span>
+                              {
+                                postIt
+                                  .song_artist
+                              }
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
 
-                    {!isMine && (
-                      <button
-                        className={
-                          isConnected
-                            ? "connect-preview-button"
-                            : "edit-note-button"
-                        }
-                        type="button"
-                        disabled={
-                          !myPostIt ||
-                          isConnected ||
-                          isConnecting
-                        }
-                        onClick={() =>
-                          handleConnect(
-                            postIt
-                          )
-                        }
-                      >
-                        {connectText}
-                      </button>
-                    )}
+                      {!isMine && (
+                        <button
+                          className={
+                            isConnected
+                              ? "connect-preview-button"
+                              : "edit-note-button"
+                          }
+                          type="button"
+                          disabled={
+                            !myPostIt ||
+                            isConnected ||
+                            isConnecting
+                          }
+                          onClick={() =>
+                            handleConnect(
+                              postIt
+                            )
+                          }
+                        >
+                          {
+                            connectText
+                          }
+                        </button>
+                      )}
 
 
-                    {isMine && (
-                      <button
-                        className="edit-note-button"
-                        type="button"
-                        onClick={
-                          openEditForm
-                        }
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </article>
-                );
-              }
-            )}
-          </div>
+                      {isMine && (
+                        <button
+                          className="edit-note-button"
+                          type="button"
+                          onClick={
+                            openEditForm
+                          }
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </article>
+                  );
+                }
+              )}
+            </div>
+
+
+            <div className="bulletin-pagination">
+              <button
+                type="button"
+                disabled={
+                  currentPage === 1
+                }
+                onClick={() =>
+                  goToPage(
+                    currentPage - 1
+                  )
+                }
+              >
+                ← Previous
+              </button>
+
+              <div className="page-count">
+                <strong>
+                  Page{" "}
+                  {currentPage}
+                </strong>
+
+                <span>
+                  of {totalPages}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  currentPage ===
+                  totalPages
+                }
+                onClick={() =>
+                  goToPage(
+                    currentPage + 1
+                  )
+                }
+              >
+                Next →
+              </button>
+            </div>
+
+            <p className="shuffle-note">
+              The bulletin reshuffles
+              each time you sign in.
+            </p>
+          </>
         )}
       </section>
 
@@ -664,88 +1199,251 @@ function BulletinBoard({
                 : "Create your Post-it"}
             </h2>
 
+
             <form
-              className="post-form"
+              className="post-form post-form-with-preview"
               onSubmit={
                 handleSubmit
               }
             >
-              <label>
-                Display name
+              <div className="post-form-fields">
+                <label>
+                  Display name
 
-                <input
-                  type="text"
-                  maxLength="80"
-                  value={displayName}
-                  onChange={(event) =>
-                    setDisplayName(
-                      event.target.value
-                    )
+                  <input
+                    type="text"
+                    maxLength="80"
+                    value={
+                      displayName
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setDisplayName(
+                        event
+                          .target
+                          .value
+                      )
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  Fun facts
+
+                  <textarea
+                    rows="5"
+                    maxLength="1000"
+                    value={
+                      funFacts
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setFunFacts(
+                        event
+                          .target
+                          .value
+                      )
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  A song that
+                  represents you
+
+                  <input
+                    type="text"
+                    maxLength="150"
+                    value={
+                      songTitle
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setSongTitle(
+                        event
+                          .target
+                          .value
+                      )
+                    }
+                    required
+                  />
+                </label>
+
+                <label>
+                  Artist
+
+                  <span className="optional-label">
+                    optional
+                  </span>
+
+                  <input
+                    type="text"
+                    maxLength="150"
+                    value={
+                      songArtist
+                    }
+                    onChange={(
+                      event
+                    ) =>
+                      setSongArtist(
+                        event
+                          .target
+                          .value
+                      )
+                    }
+                  />
+                </label>
+
+
+                <fieldset className="post-color-picker">
+                  <legend>
+                    Pick your Post-it
+                    color
+                  </legend>
+
+                  <div className="post-color-options">
+                    {postItColors.map(
+                      (
+                        option
+                      ) => (
+                        <button
+                          type="button"
+                          key={
+                            option.value
+                          }
+                          className={
+                            `post-color-choice ` +
+                            `post-color-${option.value} ` +
+                            (
+                              color ===
+                              option.value
+                                ? "selected"
+                                : ""
+                            )
+                          }
+                          onClick={() =>
+                            setColor(
+                              option.value
+                            )
+                          }
+                          aria-pressed={
+                            color ===
+                            option.value
+                          }
+                          title={
+                            option.label
+                          }
+                        >
+                          <span>
+                            {
+                              option.label
+                            }
+                          </span>
+                        </button>
+                      )
+                    )}
+                  </div>
+                </fieldset>
+
+
+                <section className="post-privacy-note">
+                  <p className="post-privacy-title">
+                    SHARE COMFORTABLY
+                  </p>
+
+                  <p>
+                    Your Post-it is only
+                    an introduction.
+                    Share what you feel
+                    comfortable with
+                    other verified
+                    students knowing,
+                    and avoid posting
+                    sensitive or overly
+                    revealing personal
+                    information.
+                  </p>
+
+                  <p>
+                    You can always get
+                    to know someone
+                    better after you
+                    connect and start
+                    chatting!
+                  </p>
+                </section>
+              </div>
+
+
+              <aside className="post-live-preview-area">
+                <p className="small-title">
+                  LIVE PREVIEW
+                </p>
+
+                <div
+                  className={
+                    `post-it-live-preview ` +
+                    `post-color-${color}`
                   }
-                  required
-                />
-              </label>
+                >
+                  <span className="post-pin">
+                  </span>
 
-              <label>
-                Fun facts
+                  <h3>
+                    {displayName.trim() ||
+                      "Your Name"}
+                  </h3>
 
-                <textarea
-                  rows="5"
-                  maxLength="1000"
-                  value={funFacts}
-                  onChange={(event) =>
-                    setFunFacts(
-                      event.target.value
-                    )
-                  }
-                  required
-                />
-              </label>
+                  <p className="preview-major">
+                    {myPostIt?.major ||
+                      "Your verified major"}
+                  </p>
 
-              <label>
-                A song that represents you
+                  <div className="post-divider">
+                  </div>
 
-                <input
-                  type="text"
-                  maxLength="150"
-                  value={songTitle}
-                  onChange={(event) =>
-                    setSongTitle(
-                      event.target.value
-                    )
-                  }
-                  required
-                />
-              </label>
+                  <p className="preview-facts">
+                    {funFacts.trim() ||
+                      "A little something about you will appear here."}
+                  </p>
 
-              <label>
-                Artist
+                  <div className="preview-song">
+                    <span>
+                      ♪
+                    </span>
 
-                <span className="optional-label">
-                  optional
-                </span>
+                    <div>
+                      <strong>
+                        {songTitle.trim() ||
+                          "Your song"}
+                      </strong>
 
-                <input
-                  type="text"
-                  maxLength="150"
-                  value={songArtist}
-                  onChange={(event) =>
-                    setSongArtist(
-                      event.target.value
-                    )
-                  }
-                />
-              </label>
+                      {songArtist.trim() && (
+                        <small>
+                          {
+                            songArtist
+                          }
+                        </small>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-              <p className="post-form-note">
-                Your major comes from your
-                verified student information,
-                so you don&apos;t need to
-                enter it again.
-              </p>
+                <p className="preview-help">
+                  Your color updates
+                  instantly while you
+                  choose.
+                </p>
+              </aside>
+
 
               <button
-                className="main-button"
+                className="main-button post-save-button"
                 type="submit"
                 disabled={saving}
               >
