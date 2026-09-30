@@ -20,20 +20,30 @@ function MyConnections({
   onBackToBulletin,
   onLogout,
 }) {
-  const [connections, setConnections] =
-    useState([]);
+  const [
+    connections,
+    setConnections,
+  ] = useState([]);
 
-  const [suggestions, setSuggestions] =
-    useState([]);
+  const [
+    suggestions,
+    setSuggestions,
+  ] = useState([]);
 
-  const [chats, setChats] =
-    useState([]);
+  const [
+    chats,
+    setChats,
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
 
-  const [message, setMessage] =
-    useState("");
+  const [
+    message,
+    setMessage,
+  ] = useState("");
 
   const [
     connectingUserId,
@@ -41,84 +51,86 @@ function MyConnections({
   ] = useState(null);
 
 
-  const loadConnections = useCallback(
-    async () => {
-      setLoading(true);
-      setMessage("");
-
-      try {
-        const [
-          connectionData,
-          chatData,
-          blockData,
-        ] = await Promise.all([
-          getConnections(token),
-          getChats(token),
-          getMyBlocks(token),
-        ]);
-
-        const blockedUserIds =
-          new Set(
-            blockData.map(
-              (block) =>
-                block.blocked_user_id
-            )
-          );
-
-        setConnections(
-          connectionData.filter(
-            (connection) =>
-              !blockedUserIds.has(
-                connection.user_id
-              )
-          )
-        );
-
-        setChats(
-          chatData.filter(
-            (chat) =>
-              !blockedUserIds.has(
-                chat.user_id
-              )
-          )
-        );
+  const loadConnections =
+    useCallback(
+      async () => {
+        setLoading(true);
+        setMessage("");
 
         try {
-          const suggestionData =
-            await getConnectionSuggestions(
-              token
+          const [
+            connectionData,
+            chatData,
+            blockData,
+          ] = await Promise.all([
+            getConnections(token),
+            getChats(token),
+            getMyBlocks(token),
+          ]);
+
+          const blockedUserIds =
+            new Set(
+              blockData.map(
+                (block) =>
+                  block
+                    .blocked_user_id
+              )
             );
 
-          setSuggestions(
-            suggestionData.filter(
-              (suggestion) =>
+          setConnections(
+            connectionData.filter(
+              (connection) =>
                 !blockedUserIds.has(
-                  suggestion.user_id
+                  connection.user_id
                 )
             )
           );
-        } catch (error) {
-          setSuggestions([]);
 
-          if (
-            error.message !==
-            "Create a Post-it before viewing connection suggestions"
-          ) {
-            setMessage(
-              error.message
+          setChats(
+            chatData.filter(
+              (chat) =>
+                !blockedUserIds.has(
+                  chat.user_id
+                )
+            )
+          );
+
+          try {
+            const suggestionData =
+              await getConnectionSuggestions(
+                token
+              );
+
+            setSuggestions(
+              suggestionData.filter(
+                (suggestion) =>
+                  !blockedUserIds.has(
+                    suggestion.user_id
+                  )
+              )
             );
+          } catch (error) {
+            setSuggestions([]);
+
+            if (
+              error.message !==
+              "Create a Post-it before viewing connection suggestions"
+            ) {
+              setMessage(
+                error.message
+              );
+            }
           }
+        } catch (error) {
+          setMessage(
+            error.message
+          );
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        setMessage(
-          error.message
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token]
-  );
+      },
+      [token]
+    );
 
 
   useEffect(() => {
@@ -151,7 +163,9 @@ function MyConnections({
         error.message
       );
     } finally {
-      setConnectingUserId(null);
+      setConnectingUserId(
+        null
+      );
     }
   }
 
@@ -167,7 +181,9 @@ function MyConnections({
   }
 
 
-  function moderationBadge(person) {
+  function moderationBadge(
+    person
+  ) {
     if (
       !person.moderation ||
       person.moderation.level ===
@@ -266,7 +282,8 @@ function MyConnections({
           <div className="empty-state">
             Loading your connections...
           </div>
-        ) : connections.length === 0 ? (
+        ) : connections.length ===
+          0 ? (
           <div className="empty-state">
             <h3>
               No connections yet!
@@ -290,7 +307,9 @@ function MyConnections({
                 return (
                   <article
                     className="verification-card"
-                    key={connection.id}
+                    key={
+                      connection.id
+                    }
                   >
                     <div className="verification-info">
                       <p className="small-title">
@@ -298,20 +317,30 @@ function MyConnections({
                       </p>
 
                       <h3>
-                        {connection.display_name}
+                        {
+                          connection
+                            .display_name
+                        }
                       </h3>
 
                       <p>
                         <strong>
                           Major:
                         </strong>{" "}
-                        {connection.major}
+                        {
+                          connection
+                            .major
+                        }
                       </p>
 
-                      {chat?.last_message ? (
+                      {chat
+                        ?.last_message ? (
                         <p className="submitted-date">
                           Latest:{" "}
-                          {chat.last_message}
+                          {
+                            chat
+                              .last_message
+                          }
                         </p>
                       ) : (
                         <p className="submitted-date">
@@ -319,10 +348,17 @@ function MyConnections({
                         </p>
                       )}
 
-                      {chat?.unread_count > 0 && (
+                      {chat
+                        ?.unread_count >
+                        0 && (
                         <div className="status-badge">
-                          {chat.unread_count}{" "}
-                          {chat.unread_count === 1
+                          {
+                            chat
+                              .unread_count
+                          }{" "}
+                          {chat
+                            .unread_count ===
+                          1
                             ? "new message"
                             : "new messages"}
                         </div>
@@ -343,7 +379,9 @@ function MyConnections({
                           )
                         }
                       >
-                        {chat?.unread_count > 0
+                        {chat
+                          ?.unread_count >
+                        0
                           ? `Chat (${chat.unread_count})`
                           : "Chat"}
                       </button>
@@ -353,7 +391,8 @@ function MyConnections({
                         type="button"
                         onClick={() =>
                           onViewProfile(
-                            connection.user_id
+                            connection
+                              .user_id
                           )
                         }
                       >
@@ -378,11 +417,11 @@ function MyConnections({
         <div className="admin-panel-heading">
           <div>
             <p className="small-title">
-              PEOPLE YOU MAY KNOW
+              PEOPLE YOU MAY CLICK WITH
             </p>
 
             <h2>
-              Mutual Connections
+              Shared Interests
             </h2>
           </div>
         </div>
@@ -390,18 +429,23 @@ function MyConnections({
 
         {loading ? (
           <div className="empty-state">
-            Finding people...
+            Finding people with
+            similar interests...
           </div>
-        ) : suggestions.length === 0 ? (
+        ) : suggestions.length ===
+          0 ? (
           <div className="empty-state">
             <h3>
-              No suggestions yet
+              No interest matches yet
             </h3>
 
             <p>
-              As your network grows,
-              students connected to your
-              connections will appear here.
+              Add a few interests to
+              your profile, separated
+              by commas. Students who
+              share at least one of
+              those interests can
+              appear here.
             </p>
           </div>
         ) : (
@@ -416,39 +460,46 @@ function MyConnections({
                 >
                   <div className="verification-info">
                     <p className="small-title">
-                      SUGGESTED CONNECTION
+                      YOU MAY CLICK
                     </p>
 
                     <h3>
-                      {suggestion.display_name}
+                      {
+                        suggestion
+                          .display_name
+                      }
                     </h3>
 
                     <p>
                       <strong>
                         Major:
                       </strong>{" "}
-                      {suggestion.major}
+                      {
+                        suggestion
+                          .major
+                      }
                     </p>
 
                     <p>
                       <strong>
-                        {suggestion.mutual_count}
+                        {suggestion
+                          .shared_interest_count}
                       </strong>{" "}
-                      {suggestion.mutual_count === 1
-                        ? "mutual connection"
-                        : "mutual connections"}
+                      {suggestion
+                        .shared_interest_count ===
+                      1
+                        ? "shared interest"
+                        : "shared interests"}
                     </p>
 
-                    {suggestion
-                      .mutual_connections
-                      .length > 0 && (
-                      <p className="submitted-date">
-                        You both know:{" "}
-                        {suggestion
-                          .mutual_connections
-                          .join(", ")}
-                      </p>
-                    )}
+                    <p className="submitted-date">
+                      <strong>
+                        Also likes:
+                      </strong>{" "}
+                      {suggestion
+                        .shared_interests
+                        .join(" • ")}
+                    </p>
 
                     {moderationBadge(
                       suggestion
@@ -473,6 +524,18 @@ function MyConnections({
                       suggestion.user_id
                         ? "Connecting..."
                         : "Get Connected!"}
+                    </button>
+
+                    <button
+                      className="needs-info-button"
+                      type="button"
+                      onClick={() =>
+                        onViewProfile(
+                          suggestion.user_id
+                        )
+                      }
+                    >
+                      View Profile
                     </button>
                   </div>
                 </article>
