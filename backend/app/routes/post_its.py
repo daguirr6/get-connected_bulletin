@@ -299,6 +299,35 @@ def get_my_post_it(
     )
 
 
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_my_post_it(
+    user: User = Depends(
+        require_verified_user
+    ),
+    db: Session = Depends(get_db),
+):
+    post_it = db.scalar(
+        select(PostIt).where(
+            PostIt.user_id == user.id
+        )
+    )
+
+    if post_it is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail=(
+                "You do not have a Post-it"
+            ),
+        )
+
+    db.delete(post_it)
+    db.commit()
+
+
 @router.patch(
     "/me",
     response_model=PostItResponse,

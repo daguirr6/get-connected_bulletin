@@ -14,6 +14,10 @@ import {
   updateMyPostIt,
 } from "./api";
 
+import {
+  deleteMyPostIt,
+} from "./postItActions";
+
 import "./BulletinBoard.css";
 
 
@@ -300,6 +304,11 @@ function BulletinBoard({
 
   const [saving, setSaving] =
     useState(false);
+
+  const [
+    removingPost,
+    setRemovingPost,
+  ] = useState(false);
 
   const [
     connectingUserId,
@@ -627,6 +636,54 @@ function BulletinBoard({
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+
+  async function handleRemovePostIt() {
+    if (!myPostIt) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Remove your Post-it from the bulletin?\n\n" +
+        "Your Get Connected account will remain active. " +
+        "You can create another Post-it later."
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRemovingPost(true);
+    setMessage("");
+
+    try {
+      await deleteMyPostIt(
+        token
+      );
+
+      setShowForm(false);
+      setMyPostIt(null);
+
+      setDisplayName("");
+      setFunFacts("");
+      setSongTitle("");
+      setSongArtist("");
+      setColor("yellow");
+
+      await loadBulletin();
+
+      setMessage(
+        "Your Post-it was removed from the bulletin."
+      );
+    } catch (error) {
+      setMessage(
+        error.message
+      );
+    } finally {
+      setRemovingPost(false);
     }
   }
 
@@ -1445,14 +1502,69 @@ function BulletinBoard({
               <button
                 className="main-button post-save-button"
                 type="submit"
-                disabled={saving}
+                disabled={
+                  saving ||
+                  removingPost
+                }
               >
                 {saving
-                  ? "Pinning..."
+                  ? "Saving..."
                   : myPostIt
                     ? "Save Changes"
                     : "Pin My Post-it"}
               </button>
+
+
+              {myPostIt && (
+                <button
+                  type="button"
+                  disabled={
+                    saving ||
+                    removingPost
+                  }
+                  onClick={
+                    handleRemovePostIt
+                  }
+                  style={{
+                    gridColumn:
+                      "1 / -1",
+
+                    width: "100%",
+
+                    padding:
+                      "11px 16px",
+
+                    border:
+                      "2px solid #a92d36",
+
+                    borderRadius:
+                      "999px",
+
+                    background:
+                      "#fffafa",
+
+                    color:
+                      "#8a2730",
+
+                    cursor:
+                      removingPost
+                        ? "default"
+                        : "pointer",
+
+                    fontWeight:
+                      "900",
+
+                    opacity:
+                      removingPost
+                        ? 0.55
+                        : 1,
+                  }}
+                >
+                  {removingPost
+                    ? "Removing..."
+                    : "Remove My Post-it"}
+                </button>
+              )}
             </form>
           </section>
         </div>
