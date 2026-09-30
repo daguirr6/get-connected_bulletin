@@ -1,5 +1,8 @@
 import asyncio
-from datetime import datetime, timezone
+from datetime import (
+    datetime,
+    timezone,
+)
 
 from fastapi import (
     APIRouter,
@@ -9,25 +12,54 @@ from fastapi import (
     WebSocketDisconnect,
     status,
 )
-from sqlalchemy import func, or_, select
+from sqlalchemy import (
+    func,
+    or_,
+    select,
+)
 from sqlalchemy.orm import Session
 
-from backend.app.blocking import has_blocked
-from backend.app.database import SessionLocal, get_db
-from backend.app.models.connection import Connection
-from backend.app.models.message import Message
-from backend.app.models.post_it import PostIt
-from backend.app.models.user import User
-from backend.app.models.verification import VerificationRequest
-from backend.app.routes.auth import require_verified_user
+from backend.app.blocking import (
+    has_blocked,
+)
+from backend.app.database import (
+    SessionLocal,
+    get_db,
+)
+from backend.app.models.connection import (
+    Connection,
+)
+from backend.app.models.message import (
+    Message,
+)
+from backend.app.models.post_it import (
+    PostIt,
+)
+from backend.app.models.user import (
+    User,
+)
+from backend.app.models.verification import (
+    VerificationRequest,
+)
+from backend.app.rate_limit import (
+    check_websocket_message_limit,
+    limit_chat_messages,
+)
+from backend.app.routes.auth import (
+    require_verified_user,
+)
 from backend.app.schemas.chat import (
     ChatSummaryResponse,
     MarkReadResponse,
     MessageCreate,
     MessageResponse,
 )
-from backend.app.security import decode_access_token
-from backend.app.websocket_manager import manager
+from backend.app.security import (
+    decode_access_token,
+)
+from backend.app.websocket_manager import (
+    manager,
+)
 
 
 router = APIRouter(
@@ -48,19 +80,29 @@ def get_user_connection(
 
     if connection is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Connection not found",
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail=(
+                "Connection not found"
+            ),
         )
 
     belongs_to_user = (
-        connection.user_one_id == user.id
-        or connection.user_two_id == user.id
+        connection.user_one_id
+        == user.id
+        or
+        connection.user_two_id
+        == user.id
     )
 
     if not belongs_to_user:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this chat",
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "You do not have access "
+                "to this chat"
+            ),
         )
 
     return connection
@@ -70,25 +112,42 @@ def get_other_user_id(
     connection: Connection,
     user_id: int,
 ) -> int:
-    if connection.user_one_id == user_id:
-        return connection.user_two_id
+    if (
+        connection.user_one_id
+        == user_id
+    ):
+        return (
+            connection.user_two_id
+        )
 
-    return connection.user_one_id
+    return (
+        connection.user_one_id
+    )
 
 
 @router.get(
     "",
-    response_model=list[ChatSummaryResponse],
+    response_model=list[
+        ChatSummaryResponse
+    ],
 )
 def get_chats(
-    user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+    user: User = Depends(
+        require_verified_user
+    ),
+
+    db: Session = Depends(
+        get_db
+    ),
 ):
     connections = db.scalars(
         select(Connection).where(
             or_(
-                Connection.user_one_id == user.id,
-                Connection.user_two_id == user.id,
+                Connection.user_one_id
+                == user.id,
+
+                Connection.user_two_id
+                == user.id,
             )
         )
     ).all()
@@ -96,9 +155,11 @@ def get_chats(
     chats = []
 
     for connection in connections:
-        other_user_id = get_other_user_id(
-            connection,
-            user.id,
+        other_user_id = (
+            get_other_user_id(
+                connection,
+                user.id,
+            )
         )
 
         other_user = db.get(
@@ -109,33 +170,61 @@ def get_chats(
         if other_user is None:
             continue
 
-        if other_user.verification_status != "verified":
+        if (
+            other_user
+            .verification_status
+            != "verified"
+        ):
+            continue
+
+        if (
+            other_user
+            .account_status
+            != "active"
+        ):
             continue
 
         post_it = db.scalar(
             select(PostIt).where(
-                PostIt.user_id == other_user_id
+                PostIt.user_id
+                == other_user_id
             )
         )
 
         verification = db.scalar(
-            select(VerificationRequest).where(
+            select(
+                VerificationRequest
+            ).where(
                 VerificationRequest.user_id
                 == other_user_id
             )
         )
 
-        if post_it is None or verification is None:
+        if verification is None:
             continue
+
+        if post_it is not None:
+            display_name = (
+                post_it.display_name
+            )
+        else:
+            display_name = (
+                other_user.username
+            )
 
         last_message = db.scalar(
             select(Message)
             .where(
                 Message.connection_id
                 == connection.id,
+
                 or_(
-                    Message.recipient_visible.is_(True),
-                    Message.sender_id == user.id,
+                    Message
+                    .recipient_visible
+                    .is_(True),
+
+                    Message.sender_id
+                    == user.id,
                 ),
             )
             .order_by(
@@ -146,44 +235,68 @@ def get_chats(
 
         unread_count = db.scalar(
             select(
-                func.count(Message.id)
+                func.count(
+                    Message.id
+                )
             ).where(
                 Message.connection_id
                 == connection.id,
-                Message.sender_id != user.id,
-                Message.recipient_visible.is_(True),
-                Message.read_at.is_(None),
+
+                Message.sender_id
+                != user.id,
+
+                Message
+                .recipient_visible
+                .is_(True),
+
+                Message.read_at
+                .is_(None),
             )
         )
 
         chats.append(
             ChatSummaryResponse(
-                connection_id=connection.id,
-                user_id=other_user_id,
-                display_name=post_it.display_name,
-                major=verification.major,
+                connection_id=
+                    connection.id,
+
+                user_id=
+                    other_user_id,
+
+                display_name=
+                    display_name,
+
+                major=
+                    verification.major,
+
                 last_message=(
                     last_message.content
                     if last_message
                     else None
                 ),
+
                 last_sender_id=(
                     last_message.sender_id
                     if last_message
                     else None
                 ),
+
                 last_message_at=(
                     last_message.created_at
                     if last_message
                     else None
                 ),
-                unread_count=unread_count or 0,
+
+                unread_count=(
+                    unread_count or 0
+                ),
             )
         )
 
     chats.sort(
         key=lambda chat: (
-            chat.last_message_at is not None,
+            chat.last_message_at
+            is not None,
+
             chat.last_message_at,
         ),
         reverse=True,
@@ -195,13 +308,24 @@ def get_chats(
 @router.post(
     "/{connection_id}/messages",
     response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
+    status_code=
+        status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(limit_chat_messages),
+    ],
 )
 def send_message(
     connection_id: int,
+
     data: MessageCreate,
-    user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+
+    user: User = Depends(
+        require_verified_user
+    ),
+
+    db: Session = Depends(
+        get_db
+    ),
 ):
     connection = get_user_connection(
         connection_id,
@@ -220,30 +344,57 @@ def send_message(
         recipient_id,
     ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Unblock this user before messaging them",
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Unblock this user "
+                "before messaging them"
+            ),
         )
 
-    recipient_blocked_sender = has_blocked(
-        db,
-        recipient_id,
-        user.id,
+    recipient_blocked_sender = (
+        has_blocked(
+            db,
+            recipient_id,
+            user.id,
+        )
     )
 
-    content = data.content.strip()
+    content = (
+        data.content.strip()
+    )
 
     if not content:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Message cannot be empty",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Message cannot be empty"
+            ),
+        )
+
+    if len(content) > 2000:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Message is too long"
+            ),
         )
 
     message = Message(
-        connection_id=connection_id,
-        sender_id=user.id,
-        content=content,
+        connection_id=
+            connection_id,
+
+        sender_id=
+            user.id,
+
+        content=
+            content,
+
         recipient_visible=(
-            not recipient_blocked_sender
+            not
+            recipient_blocked_sender
         ),
     )
 
@@ -253,22 +404,40 @@ def send_message(
 
     return MessageResponse(
         id=message.id,
-        connection_id=message.connection_id,
-        sender_id=message.sender_id,
-        content=message.content,
-        created_at=message.created_at,
-        read_at=message.read_at,
+
+        connection_id=
+            message.connection_id,
+
+        sender_id=
+            message.sender_id,
+
+        content=
+            message.content,
+
+        created_at=
+            message.created_at,
+
+        read_at=
+            message.read_at,
     )
 
 
 @router.get(
     "/{connection_id}/messages",
-    response_model=list[MessageResponse],
+    response_model=list[
+        MessageResponse
+    ],
 )
 def get_messages(
     connection_id: int,
-    user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+
+    user: User = Depends(
+        require_verified_user
+    ),
+
+    db: Session = Depends(
+        get_db
+    ),
 ):
     get_user_connection(
         connection_id,
@@ -281,9 +450,14 @@ def get_messages(
         .where(
             Message.connection_id
             == connection_id,
+
             or_(
-                Message.recipient_visible.is_(True),
-                Message.sender_id == user.id,
+                Message
+                .recipient_visible
+                .is_(True),
+
+                Message.sender_id
+                == user.id,
             ),
         )
         .order_by(
@@ -294,11 +468,21 @@ def get_messages(
     return [
         MessageResponse(
             id=message.id,
-            connection_id=message.connection_id,
-            sender_id=message.sender_id,
-            content=message.content,
-            created_at=message.created_at,
-            read_at=message.read_at,
+
+            connection_id=
+                message.connection_id,
+
+            sender_id=
+                message.sender_id,
+
+            content=
+                message.content,
+
+            created_at=
+                message.created_at,
+
+            read_at=
+                message.read_at,
         )
         for message in messages
     ]
@@ -310,8 +494,14 @@ def get_messages(
 )
 def mark_chat_read(
     connection_id: int,
-    user: User = Depends(require_verified_user),
-    db: Session = Depends(get_db),
+
+    user: User = Depends(
+        require_verified_user
+    ),
+
+    db: Session = Depends(
+        get_db
+    ),
 ):
     get_user_connection(
         connection_id,
@@ -323,9 +513,16 @@ def mark_chat_read(
         select(Message).where(
             Message.connection_id
             == connection_id,
-            Message.sender_id != user.id,
-            Message.recipient_visible.is_(True),
-            Message.read_at.is_(None),
+
+            Message.sender_id
+            != user.id,
+
+            Message
+            .recipient_visible
+            .is_(True),
+
+            Message.read_at
+            .is_(None),
         )
     ).all()
 
@@ -339,8 +536,11 @@ def mark_chat_read(
     db.commit()
 
     return MarkReadResponse(
-        connection_id=connection_id,
-        marked_read=len(unread_messages),
+        connection_id=
+            connection_id,
+
+        marked_read=
+            len(unread_messages),
     )
 
 
@@ -357,15 +557,21 @@ async def chat_websocket(
 
     try:
         try:
-            auth_data = await asyncio.wait_for(
-                websocket.receive_json(),
-                timeout=10,
+            auth_data = (
+                await asyncio.wait_for(
+                    websocket.receive_json(),
+                    timeout=10,
+                )
             )
+
         except asyncio.TimeoutError:
             await websocket.close(
                 code=1008,
-                reason="Authentication timed out",
+                reason=(
+                    "Authentication timed out"
+                ),
             )
+
             return
 
         if not isinstance(
@@ -374,35 +580,57 @@ async def chat_websocket(
         ):
             await websocket.close(
                 code=1008,
-                reason="Invalid authentication",
+                reason=(
+                    "Invalid authentication"
+                ),
             )
+
             return
 
-        if auth_data.get("type") != "auth":
+        if (
+            auth_data.get("type")
+            != "auth"
+        ):
             await websocket.close(
                 code=1008,
-                reason="Authentication required",
+                reason=(
+                    "Authentication required"
+                ),
             )
+
             return
 
-        token = auth_data.get("token")
+        token = auth_data.get(
+            "token"
+        )
 
-        if not isinstance(token, str):
+        if not isinstance(
+            token,
+            str,
+        ):
             await websocket.close(
                 code=1008,
-                reason="Invalid authentication",
+                reason=(
+                    "Invalid authentication"
+                ),
             )
+
             return
 
-        decoded_user_id = decode_access_token(
-            token
+        decoded_user_id = (
+            decode_access_token(
+                token
+            )
         )
 
         if decoded_user_id is None:
             await websocket.close(
                 code=1008,
-                reason="Invalid or expired login",
+                reason=(
+                    "Invalid or expired login"
+                ),
             )
+
             return
 
         unread_message_ids = []
@@ -422,8 +650,24 @@ async def chat_websocket(
             if user is None:
                 await websocket.close(
                     code=1008,
-                    reason="User not found",
+                    reason=(
+                        "User not found"
+                    ),
                 )
+
+                return
+
+            if (
+                user.account_status
+                != "active"
+            ):
+                await websocket.close(
+                    code=1008,
+                    reason=(
+                        "Account is not active"
+                    ),
+                )
+
                 return
 
             if (
@@ -432,21 +676,28 @@ async def chat_websocket(
             ):
                 await websocket.close(
                     code=1008,
-                    reason="Account is not verified",
+                    reason=(
+                        "Account is not verified"
+                    ),
                 )
+
                 return
 
             if connection is None:
                 await websocket.close(
                     code=1008,
-                    reason="Connection not found",
+                    reason=(
+                        "Connection not found"
+                    ),
                 )
+
                 return
 
             belongs_to_user = (
                 connection.user_one_id
                 == user.id
-                or connection.user_two_id
+                or
+                connection.user_two_id
                 == user.id
             )
 
@@ -458,6 +709,7 @@ async def chat_websocket(
                         "access to this chat"
                     ),
                 )
+
                 return
 
             user_id = user.id
@@ -466,12 +718,16 @@ async def chat_websocket(
                 select(Message).where(
                     Message.connection_id
                     == connection_id,
+
                     Message.sender_id
                     != user.id,
-                    Message.recipient_visible.is_(
-                        True
-                    ),
-                    Message.read_at.is_(None),
+
+                    Message
+                    .recipient_visible
+                    .is_(True),
+
+                    Message.read_at
+                    .is_(None),
                 )
             ).all()
 
@@ -481,7 +737,9 @@ async def chat_websocket(
                 )
 
                 for message in unread_messages:
-                    message.read_at = read_time
+                    message.read_at = (
+                        read_time
+                    )
 
                     unread_message_ids.append(
                         message.id
@@ -498,8 +756,10 @@ async def chat_websocket(
         await websocket.send_json(
             {
                 "type": "ready",
-                "connection_id": connection_id,
-                "user_id": user_id,
+                "connection_id":
+                    connection_id,
+                "user_id":
+                    user_id,
             }
         )
 
@@ -508,20 +768,27 @@ async def chat_websocket(
                 connection_id,
                 {
                     "type": "read",
-                    "connection_id": connection_id,
-                    "reader_id": user_id,
-                    "message_ids": (
-                        unread_message_ids
-                    ),
+
+                    "connection_id":
+                        connection_id,
+
+                    "reader_id":
+                        user_id,
+
+                    "message_ids":
+                        unread_message_ids,
+
                     "read_at": (
-                        read_time.isoformat()
+                        read_time
+                        .isoformat()
                     ),
                 },
             )
 
         while True:
             data = (
-                await websocket.receive_json()
+                await websocket
+                .receive_json()
             )
 
             if not isinstance(
@@ -531,12 +798,18 @@ async def chat_websocket(
                 await websocket.send_json(
                     {
                         "type": "error",
-                        "message": "Invalid message",
+                        "message": (
+                            "Invalid message"
+                        ),
                     }
                 )
+
                 continue
 
-            if data.get("type") != "message":
+            if (
+                data.get("type")
+                != "message"
+            ):
                 await websocket.send_json(
                     {
                         "type": "error",
@@ -545,6 +818,7 @@ async def chat_websocket(
                         ),
                     }
                 )
+
                 continue
 
             content = data.get(
@@ -564,6 +838,7 @@ async def chat_websocket(
                         ),
                     }
                 )
+
                 continue
 
             content = content.strip()
@@ -578,6 +853,7 @@ async def chat_websocket(
                         ),
                     }
                 )
+
                 continue
 
             if len(content) > 2000:
@@ -589,9 +865,42 @@ async def chat_websocket(
                         ),
                     }
                 )
+
                 continue
 
-            should_only_echo_to_sender = False
+            retry_after = (
+                check_websocket_message_limit(
+                    user_id
+                )
+            )
+
+            if (
+                retry_after
+                is not None
+            ):
+                await websocket.send_json(
+                    {
+                        "type": "error",
+
+                        "code":
+                            "rate_limited",
+
+                        "message": (
+                            "You're sending "
+                            "messages too quickly. "
+                            "Please wait a moment."
+                        ),
+
+                        "retry_after":
+                            retry_after,
+                    }
+                )
+
+                continue
+
+            should_only_echo_to_sender = (
+                False
+            )
 
             with SessionLocal() as db:
                 user = db.get(
@@ -606,35 +915,49 @@ async def chat_websocket(
 
                 if (
                     user is None
-                    or connection is None
+                    or
+                    connection is None
                 ):
                     await websocket.close(
                         code=1008,
-                        reason="Chat access ended",
+                        reason=(
+                            "Chat access ended"
+                        ),
                     )
+
                     return
 
                 belongs_to_user = (
                     connection.user_one_id
                     == user.id
-                    or connection.user_two_id
+                    or
+                    connection.user_two_id
                     == user.id
                 )
 
                 if (
+                    user.account_status
+                    != "active"
+                    or
                     user.verification_status
                     != "verified"
-                    or not belongs_to_user
+                    or
+                    not belongs_to_user
                 ):
                     await websocket.close(
                         code=1008,
-                        reason="Chat access ended",
+                        reason=(
+                            "Chat access ended"
+                        ),
                     )
+
                     return
 
-                recipient_id = get_other_user_id(
-                    connection,
-                    user.id,
+                recipient_id = (
+                    get_other_user_id(
+                        connection,
+                        user.id,
+                    )
                 )
 
                 if has_blocked(
@@ -651,6 +974,7 @@ async def chat_websocket(
                             ),
                         }
                     )
+
                     continue
 
                 recipient_blocked_sender = (
@@ -662,11 +986,18 @@ async def chat_websocket(
                 )
 
                 message = Message(
-                    connection_id=connection_id,
-                    sender_id=user_id,
-                    content=content,
+                    connection_id=
+                        connection_id,
+
+                    sender_id=
+                        user_id,
+
+                    content=
+                        content,
+
                     recipient_visible=(
-                        not recipient_blocked_sender
+                        not
+                        recipient_blocked_sender
                     ),
                 )
 
@@ -674,35 +1005,50 @@ async def chat_websocket(
                 db.flush()
 
                 if (
-                    not recipient_blocked_sender
-                    and manager.is_user_connected(
+                    not
+                    recipient_blocked_sender
+                    and
+                    manager
+                    .is_user_connected(
                         connection_id,
                         recipient_id,
                     )
                 ):
-                    message.read_at = datetime.now(
-                        timezone.utc
+                    message.read_at = (
+                        datetime.now(
+                            timezone.utc
+                        )
                     )
 
                 db.commit()
                 db.refresh(message)
 
                 message_data = {
-                    "type": "message",
-                    "id": message.id,
-                    "connection_id": (
-                        message.connection_id
-                    ),
-                    "sender_id": (
-                        message.sender_id
-                    ),
-                    "content": message.content,
+                    "type":
+                        "message",
+
+                    "id":
+                        message.id,
+
+                    "connection_id":
+                        message.connection_id,
+
+                    "sender_id":
+                        message.sender_id,
+
+                    "content":
+                        message.content,
+
                     "created_at": (
-                        message.created_at
+                        message
+                        .created_at
                         .isoformat()
                     ),
+
                     "read_at": (
-                        message.read_at.isoformat()
+                        message
+                        .read_at
+                        .isoformat()
                         if message.read_at
                         else None
                     ),
@@ -718,6 +1064,7 @@ async def chat_websocket(
                     user_id,
                     message_data,
                 )
+
             else:
                 await manager.broadcast(
                     connection_id,

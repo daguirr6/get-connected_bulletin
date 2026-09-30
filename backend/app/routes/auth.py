@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+)
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
@@ -8,7 +13,13 @@ from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.user import User
-from backend.app.models.verification import VerificationRequest
+from backend.app.models.verification import (
+    VerificationRequest,
+)
+from backend.app.rate_limit import (
+    limit_login,
+    limit_register,
+)
 from backend.app.schemas.auth import (
     CurrentUserResponse,
     LoginRequest,
@@ -36,12 +47,19 @@ bearer_scheme = HTTPBearer()
     "/register",
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(limit_register),
+    ],
 )
 def register_user(
     data: RegisterRequest,
     db: Session = Depends(get_db),
 ):
-    username = data.username.strip().lower()
+    username = (
+        data.username
+        .strip()
+        .lower()
+    )
 
     existing_user = db.scalar(
         select(User).where(
@@ -51,8 +69,11 @@ def register_user(
 
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username is already taken",
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "Username is already taken"
+            ),
         )
 
     user = User(
@@ -67,8 +88,10 @@ def register_user(
 
     verification = VerificationRequest(
         user_id=user.id,
-        full_name=data.full_name.strip(),
-        major=data.major.strip(),
+        full_name=
+            data.full_name.strip(),
+        major=
+            data.major.strip(),
     )
 
     db.add(verification)
@@ -76,7 +99,8 @@ def register_user(
 
     return RegisterResponse(
         username=user.username,
-        verification_status=user.verification_status,
+        verification_status=
+            user.verification_status,
         message=(
             "Account created. "
             "Student verification is pending."
@@ -87,12 +111,19 @@ def register_user(
 @router.post(
     "/login",
     response_model=LoginResponse,
+    dependencies=[
+        Depends(limit_login),
+    ],
 )
 def login_user(
     data: LoginRequest,
     db: Session = Depends(get_db),
 ):
-    username = data.username.strip().lower()
+    username = (
+        data.username
+        .strip()
+        .lower()
+    )
 
     user = db.scalar(
         select(User).where(
@@ -102,8 +133,11 @@ def login_user(
 
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            status_code=
+                status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Invalid username or password"
+            ),
         )
 
     if not verify_password(
@@ -111,8 +145,11 @@ def login_user(
         user.password_hash,
     ):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid username or password",
+            status_code=
+                status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Invalid username or password"
+            ),
         )
 
     access_token = create_access_token(
@@ -125,10 +162,12 @@ def login_user(
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(
-        bearer_scheme
-    ),
-    db: Session = Depends(get_db),
+    credentials:
+        HTTPAuthorizationCredentials =
+        Depends(bearer_scheme),
+
+    db: Session =
+        Depends(get_db),
 ):
     user_id = decode_access_token(
         credentials.credentials
@@ -136,8 +175,11 @@ def get_current_user(
 
     if user_id is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired login",
+            status_code=
+                status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "Invalid or expired login"
+            ),
         )
 
     user = db.get(
@@ -147,8 +189,20 @@ def get_current_user(
 
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account no longer exists",
+            status_code=
+                status.HTTP_401_UNAUTHORIZED,
+            detail=(
+                "User account no longer exists"
+            ),
+        )
+
+    if user.account_status != "active":
+        raise HTTPException(
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This account is not active"
+            ),
         )
 
     return user
@@ -161,8 +215,11 @@ def require_admin(
 ):
     if user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Admin access required"
+            ),
         )
 
     return user
@@ -173,10 +230,16 @@ def require_verified_user(
         get_current_user
     ),
 ):
-    if user.verification_status != "verified":
+    if (
+        user.verification_status
+        != "verified"
+    ):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account must be verified first",
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Account must be verified first"
+            ),
         )
 
     return user
@@ -195,7 +258,8 @@ def current_user(
         id=user.id,
         username=user.username,
         role=user.role,
-        verification_status=user.verification_status,
+        verification_status=
+            user.verification_status,
         verification_welcome_seen=(
             user.verification_welcome_seen
         ),
@@ -209,7 +273,10 @@ def mark_verification_welcome_seen(
     user: User = Depends(
         require_verified_user
     ),
-    db: Session = Depends(get_db),
+
+    db: Session = Depends(
+        get_db
+    ),
 ):
     user.verification_welcome_seen = True
 
@@ -218,7 +285,8 @@ def mark_verification_welcome_seen(
 
     return {
         "message": (
-            "Verification welcome marked as seen"
+            "Verification welcome "
+            "marked as seen"
         ),
         "verification_welcome_seen": (
             user.verification_welcome_seen
