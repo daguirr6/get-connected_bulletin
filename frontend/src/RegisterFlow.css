@@ -1,0 +1,507 @@
+.register-flow,
+.register-success {
+  animation:
+    register-screen-in
+    0.45s
+    ease
+    both;
+}
+
+
+@keyframes register-screen-in {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+.register-step-heading {
+  margin-bottom: 25px;
+}
+
+
+.register-progress-label {
+  margin-bottom: 9px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 15px;
+
+  color: #006633;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  letter-spacing: 1.2px;
+}
+
+
+.register-progress-label strong {
+  color: #777c74;
+
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+
+.register-progress-track {
+  height: 6px;
+
+  margin-bottom: 24px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: #e3dfca;
+}
+
+
+.register-progress-half,
+.register-progress-full {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #006633,
+      #26a664,
+      #f2c230
+    );
+}
+
+
+.register-progress-half {
+  width: 50%;
+
+  animation:
+    register-half-grow
+    0.6s
+    ease
+    both;
+}
+
+
+.register-progress-full {
+  width: 100%;
+
+  animation:
+    register-full-grow
+    0.6s
+    ease
+    both;
+}
+
+
+@keyframes register-half-grow {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 50%;
+  }
+}
+
+
+@keyframes register-full-grow {
+  from {
+    width: 50%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+
+.register-step-heading h2,
+.register-success h2 {
+  margin:
+    0 0 10px;
+
+  color: #006633;
+
+  font-size: 29px;
+
+  line-height: 1.1;
+}
+
+
+.register-step-heading > p,
+.register-success > p {
+  margin: 0;
+
+  color: #5a655e;
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+
+.register-label {
+  margin-bottom: 18px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  color: #344039;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+
+.register-label input {
+  width: 100%;
+
+  padding:
+    12px 13px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid #b9b593;
+
+  border-radius: 7px;
+
+  background: white;
+
+  color: #202823;
+
+  outline: none;
+
+  font: inherit;
+}
+
+
+.register-label input:focus {
+  border-color: #006633;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(
+      0,
+      102,
+      51,
+      0.12
+    );
+}
+
+
+.register-label small {
+  color: #7b817b;
+
+  font-size: 10px;
+  font-weight: 500;
+
+  line-height: 1.45;
+}
+
+
+.register-security-box,
+.register-why-box,
+.register-not-needed,
+.register-success-card,
+.register-no-notification {
+  margin:
+    5px 0 20px;
+
+  padding:
+    14px 16px;
+
+  border-left:
+    4px solid #f2c230;
+
+  background: #fff6c9;
+
+  color: #52584f;
+
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+
+.register-security-box strong,
+.register-not-needed strong,
+.register-success-card strong,
+.register-no-notification strong {
+  color: #39443d;
+}
+
+
+.register-security-box p,
+.register-why-box p,
+.register-not-needed p,
+.register-success-card p,
+.register-no-notification p {
+  margin:
+    7px 0 0;
+}
+
+
+.register-why-box {
+  border-left-color: #006633;
+
+  background: #eef7f1;
+}
+
+
+.register-why-title {
+  margin-top: 0 !important;
+
+  color: #006633;
+
+  font-weight: 900;
+}
+
+
+.register-not-needed {
+  border-left-color: #006633;
+
+  background: #eef7f1;
+}
+
+
+.register-not-needed-grid {
+  margin-top: 11px;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      1fr
+    );
+
+  gap:
+    7px 15px;
+
+  color: #3e5949;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+
+.register-primary-button,
+.register-secondary-button,
+.register-back-button {
+  padding:
+    12px 18px;
+
+  border-radius: 999px;
+
+  cursor: pointer;
+
+  font: inherit;
+  font-weight: 900;
+}
+
+
+.register-primary-button {
+  width: 100%;
+
+  border:
+    2px solid #006633;
+
+  background: #006633;
+
+  color: white;
+}
+
+
+.register-primary-button:hover {
+  background: #004f28;
+
+  border-color: #004f28;
+}
+
+
+.register-primary-button:disabled {
+  opacity: 0.55;
+
+  cursor: wait;
+}
+
+
+.register-secondary-button {
+  width: 100%;
+
+  margin-top: 10px;
+
+  border:
+    2px solid #006633;
+
+  background: white;
+
+  color: #006633;
+}
+
+
+.register-back-button {
+  border:
+    2px solid #bbb89e;
+
+  background: white;
+
+  color: #626a64;
+}
+
+
+.register-final-actions {
+  display: grid;
+
+  grid-template-columns:
+    0.7fr
+    1.5fr;
+
+  gap: 10px;
+}
+
+
+.register-success {
+  text-align: center;
+}
+
+
+.register-success-icon {
+  width: 64px;
+  height: 64px;
+
+  margin:
+    0 auto 17px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  border-radius: 50%;
+
+  background: #006633;
+
+  color: white;
+
+  font-size: 31px;
+  font-weight: 900;
+
+  animation:
+    register-success-pop
+    0.55s
+    cubic-bezier(
+      0.22,
+      1,
+      0.36,
+      1
+    )
+    both;
+}
+
+
+@keyframes register-success-pop {
+  from {
+    opacity: 0;
+
+    transform:
+      scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      scale(1);
+  }
+}
+
+
+.register-eyebrow {
+  margin:
+    0 0 8px !important;
+
+  color: #006633 !important;
+
+  font-size: 10px !important;
+  font-weight: 900;
+
+  letter-spacing: 1.5px;
+}
+
+
+.register-success-card,
+.register-no-notification {
+  margin-top: 22px;
+
+  text-align: left;
+}
+
+
+.register-no-notification {
+  border-left-color: #d29e08;
+
+  background: #fff8dc;
+}
+
+
+.register-site-reminder {
+  margin:
+    21px 0;
+
+  padding:
+    14px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  border:
+    1px dashed #bbb18b;
+
+  border-radius: 10px;
+
+  background: white;
+
+  color: #6c716a;
+
+  font-size: 11px;
+}
+
+
+.register-site-reminder strong {
+  color: #006633;
+
+  font-size: 17px;
+}
+
+
+@media (
+  max-width: 520px
+) {
+  .register-not-needed-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .register-final-actions {
+    grid-template-columns:
+      1fr;
+  }
+}
