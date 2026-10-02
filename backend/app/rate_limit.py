@@ -77,6 +77,39 @@ def get_client_ip(
     return "unknown"
 
 
+async def get_request_username(
+    request: Request,
+) -> str:
+    try:
+        data = await request.json()
+    except Exception:
+        return "unknown"
+
+    username = data.get(
+        "username",
+        "",
+    )
+
+    if not isinstance(
+        username,
+        str,
+    ):
+        return "unknown"
+
+    username = (
+        username
+        .strip()
+        .lower()
+    )
+
+    if not username:
+        return "unknown"
+
+    # Prevent a giant request value from
+    # becoming a giant in-memory bucket key.
+    return username[:100]
+
+
 def get_token_user_id(
     request: Request,
 ) -> int | None:
@@ -131,30 +164,98 @@ def enforce_limit(
     )
 
 
-def limit_login(
+async def limit_login(
     request: Request,
 ):
     ip_address = get_client_ip(
         request
     )
 
+    username = (
+        await get_request_username(
+            request
+        )
+    )
+
+    # Main protection:
+    # repeated attempts against the
+    # same username from the same
+    # network address.
+    #
+    # This stops one person from
+    # hammering one account without
+    # punishing everyone who shares
+    # a campus IP.
     enforce_limit(
-        key=f"login:{ip_address}",
-        limit=15,
+        key=(
+            f"login:"
+            f"{ip_address}:"
+            f"{username}"
+        ),
+        limit=10,
+        window_seconds=60,
+    )
+
+    # Large emergency ceiling.
+    #
+    # This catches broad automated
+    # abuse while still leaving room
+    # for many legitimate students
+    # behind the same campus/NAT IP.
+    enforce_limit(
+        key=(
+            f"login-ip:"
+            f"{ip_address}"
+        ),
+        limit=300,
         window_seconds=60,
     )
 
 
-def limit_register(
+async def limit_register(
     request: Request,
 ):
     ip_address = get_client_ip(
         request
     )
 
+    username = (
+        await get_request_username(
+            request
+        )
+    )
+
+    # Main registration protection.
+    #
+    # Someone repeatedly attempting
+    # the same username from the same
+    # IP gets slowed down.
     enforce_limit(
-        key=f"register:{ip_address}",
-        limit=10,
+        key=(
+            f"register:"
+            f"{ip_address}:"
+            f"{username}"
+        ),
+        limit=5,
+        window_seconds=600,
+    )
+
+    # Campus-friendly shared-IP ceiling.
+    #
+    # The old system allowed only
+    # 10 registrations total from an
+    # IP every 10 minutes. That could
+    # block unrelated students on the
+    # same university network.
+    #
+    # 120 requests is intentionally a
+    # much larger emergency ceiling.
+    enforce_limit(
+        key=(
+            f"register-ip:"
+            f"{ip_address}"
+        ),
+        limit=120,
         window_seconds=600,
     )
 
@@ -167,7 +268,10 @@ def limit_reports(
     )
 
     if user_id is not None:
-        key = f"report:user:{user_id}"
+        key = (
+            f"report:user:"
+            f"{user_id}"
+        )
     else:
         key = (
             f"report:ip:"
