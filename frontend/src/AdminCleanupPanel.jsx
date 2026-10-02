@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import {
+  deleteAdminUser,
   getAdminPostIts,
   getAdminUsers,
   removeAdminPostIt,
@@ -187,7 +188,7 @@ function AdminCleanupPanel({ token }) {
 
     const confirmed =
       window.confirm(
-        `Confirm account status change for ${user.username}: ${user.account_status} → ${nextStatus}?`
+        `Confirm account status change for ${user.username}: ${user.account_status} -> ${nextStatus}?`
       );
 
     if (!confirmed) {
@@ -211,6 +212,79 @@ function AdminCleanupPanel({ token }) {
 
       setMessage(
         `${user.username} is now ${nextStatus}.`
+      );
+
+      await loadCleanupData();
+    } catch (actionError) {
+      setError(
+        actionError.message
+      );
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+
+  async function handleDeleteUser(
+    user
+  ) {
+    setMessage("");
+    setError("");
+
+    const reason = window.prompt(
+      `Why are you permanently deleting ${user.username}?\n\nUse permanent deletion for test accounts, duplicate accounts, or approved data-deletion requests.`
+    );
+
+    if (
+      reason === null ||
+      reason.trim().length < 3
+    ) {
+      return;
+    }
+
+    const typedUsername =
+      window.prompt(
+        `PERMANENT DELETION\n\nThis cannot be undone.\n\nType the username exactly to confirm:\n\n${user.username}`
+      );
+
+    if (typedUsername === null) {
+      return;
+    }
+
+    if (
+      typedUsername.trim() !==
+      user.username
+    ) {
+      setError(
+        `Deletion cancelled. You must type "${user.username}" exactly.`
+      );
+
+      return;
+    }
+
+    const finalConfirmation =
+      window.confirm(
+        `Permanently delete ${user.username}?\n\nThis will delete the account and database records tied to it. This action cannot be undone.`
+      );
+
+    if (!finalConfirmation) {
+      return;
+    }
+
+    setBusyKey(
+      `delete-user-${user.id}`
+    );
+
+    try {
+      await deleteAdminUser(
+        token,
+        user.id,
+        typedUsername.trim(),
+        reason.trim()
+      );
+
+      setMessage(
+        `${user.username} was permanently deleted.`
       );
 
       await loadCleanupData();
@@ -355,10 +429,11 @@ function AdminCleanupPanel({ token }) {
             </h2>
 
             <p className="admin-cleanup-explainer">
-              Suspended and removed accounts
-              cannot use Get Connected. Restoring
-              an account returns it to active
-              status.
+              Suspend or remove access for
+              moderation. Permanent deletion
+              should only be used for test,
+              duplicate, or approved
+              data-deletion accounts.
             </p>
           </div>
         </div>
@@ -441,7 +516,9 @@ function AdminCleanupPanel({ token }) {
                         className="admin-restore-button"
                         disabled={
                           busyKey ===
-                          `user-${user.id}`
+                          `user-${user.id}` ||
+                          busyKey ===
+                          `delete-user-${user.id}`
                         }
                         onClick={() =>
                           changeUserStatus(
@@ -461,7 +538,9 @@ function AdminCleanupPanel({ token }) {
                         className="admin-suspend-button"
                         disabled={
                           busyKey ===
-                          `user-${user.id}`
+                          `user-${user.id}` ||
+                          busyKey ===
+                          `delete-user-${user.id}`
                         }
                         onClick={() =>
                           changeUserStatus(
@@ -481,7 +560,9 @@ function AdminCleanupPanel({ token }) {
                         className="admin-danger-button"
                         disabled={
                           busyKey ===
-                          `user-${user.id}`
+                          `user-${user.id}` ||
+                          busyKey ===
+                          `delete-user-${user.id}`
                         }
                         onClick={() =>
                           changeUserStatus(
@@ -493,6 +574,27 @@ function AdminCleanupPanel({ token }) {
                         Remove Access
                       </button>
                     )}
+
+                    <button
+                      type="button"
+                      className="admin-danger-button"
+                      disabled={
+                        busyKey ===
+                        `user-${user.id}` ||
+                        busyKey ===
+                        `delete-user-${user.id}`
+                      }
+                      onClick={() =>
+                        handleDeleteUser(
+                          user
+                        )
+                      }
+                    >
+                      {busyKey ===
+                      `delete-user-${user.id}`
+                        ? "Deleting..."
+                        : "Delete Permanently"}
+                    </button>
                   </div>
                 </article>
               )

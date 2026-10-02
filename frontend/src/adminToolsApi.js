@@ -70,6 +70,7 @@ export function removeAdminPostIt(
     token,
     {
       method: "DELETE",
+
       body: JSON.stringify({
         reason,
       }),
@@ -99,9 +100,34 @@ export function setAdminUserStatus(
     token,
     {
       method: "PATCH",
+
       body: JSON.stringify({
         account_status:
           accountStatus,
+
+        reason,
+      }),
+    }
+  );
+}
+
+
+export function deleteAdminUser(
+  token,
+  userId,
+  confirmUsername,
+  reason
+) {
+  return adminRequest(
+    `/admin/users/${userId}`,
+    token,
+    {
+      method: "DELETE",
+
+      body: JSON.stringify({
+        confirm_username:
+          confirmUsername,
+
         reason,
       }),
     }

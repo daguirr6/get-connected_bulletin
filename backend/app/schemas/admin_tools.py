@@ -60,3 +60,21 @@ class AdminAccountStatusResponse(BaseModel):
     username: str
     account_status: str
     message: str
+
+
+class AdminAccountDeleteRequest(BaseModel):
+    confirm_username: str = Field(
+        min_length=1,
+        max_length=50,
+    )
+
+    reason: str = Field(
+        min_length=3,
+        max_length=1000,
+    )
+
+
+class AdminAccountDeleteResponse(BaseModel):
+    user_id: int
+    username: str
+    message: str
