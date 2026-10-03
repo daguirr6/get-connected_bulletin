@@ -3,28 +3,42 @@ import {
   useState,
 } from "react";
 
-import DemoBulletin from "./DemoBulletin";
+import DemoBulletin
+  from "./DemoBulletin";
+
+import {
+  OPEN_FEEDBACK_EVENT,
+} from "./SiteFooter";
 
 import "./LandingPage.css";
+import "./LandingPageExtras.css";
 
 
-const loadingMessages = [
-  "Brandishing a few last files...",
-  "Someone put the floppy disk in backwards...",
-  "Trying to solo Malenia as a Wretch...",
-  "The line at Panera is long again...",
-  "Chasing off the grubhub robots...",
-  "Mama-say mama-sa mama-coo-sa...",
-  "Claiming the nearby pokemon gym real quick...",
-  "Reconnecting the Wi-Fi with positive thinking...",
-  "Counting Post-its one by one...",
-  "Pretending this loading bar is necessary...",
-];
+const loadingMessages = [ 
+  "Brandishing a few last files...", 
+  "Someone put the floppy disk in backwards...", 
+  "Trying to solo Malenia as a Wretch...", 
+  "Convincing PostgreSQL we're friends...", 
+  "Attempting to out-pizza the hut...", 
+  "Currently waiting in line at panera...", 
+  "All these squares make a circle...", 
+  "Im tired of this, Grandpa...",
+  "Counting Post-its one by one...", 
+  "Pretending this loading bar is necessary...", 
+  "Bazinga...", 
+  "Driver picks the music, shotgun shuts his cakehole...", 
+  "Reality is an illusion, the universe is a hologram, buy gold, bye...",   
+]; 
 
 
-const INTRO_DURATION = 13000;
-const MESSAGE_DURATION = 2600;
-const FINISH_HOLD = 850;
+const INTRO_DURATION =
+  13000;
+
+const MESSAGE_DURATION =
+  2600;
+
+const FINISH_HOLD =
+  850;
 
 
 function LandingPage({
@@ -37,18 +51,28 @@ function LandingPage({
       "get_connected_v2_intro_seen"
     ) === "true";
 
-  const [introDone, setIntroDone] =
-    useState(alreadySeen);
+
+  const [
+    introDone,
+    setIntroDone,
+  ] = useState(
+    alreadySeen
+  );
+
 
   const [
     introFinishing,
     setIntroFinishing,
   ] = useState(false);
 
-  const [progress, setProgress] =
-    useState(
-      alreadySeen ? 100 : 0
-    );
+
+  const [
+    progress,
+    setProgress,
+  ] = useState(
+    alreadySeen ? 100 : 0
+  );
+
 
   const [
     messageIndex,
@@ -59,6 +83,29 @@ function LandingPage({
       loadingMessages.length
     )
   );
+
+
+  useEffect(() => {
+    const previousScrollRestoration =
+      window.history
+        .scrollRestoration;
+
+    window.history
+      .scrollRestoration =
+      "manual";
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    return () => {
+      window.history
+        .scrollRestoration =
+        previousScrollRestoration;
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -140,7 +187,10 @@ function LandingPage({
       window.setTimeout(
         () => {
           setProgress(100);
-          setIntroFinishing(true);
+
+          setIntroFinishing(
+            true
+          );
         },
         INTRO_DURATION
       );
@@ -183,7 +233,10 @@ function LandingPage({
 
   function skipIntro() {
     setProgress(100);
-    setIntroFinishing(true);
+
+    setIntroFinishing(
+      true
+    );
 
     window.setTimeout(
       () => {
@@ -210,6 +263,15 @@ function LandingPage({
         behavior: "smooth",
         block: "start",
       });
+  }
+
+
+  function openFeedback() {
+    window.dispatchEvent(
+      new Event(
+        OPEN_FEEDBACK_EVENT
+      )
+    );
   }
 
 
@@ -314,7 +376,7 @@ function LandingPage({
               type="button"
               onClick={onPrivacy}
             >
-              Safety & Appeals
+              Safety &amp; Appeals
             </button>
 
             <button
@@ -324,6 +386,15 @@ function LandingPage({
               }
             >
               Create Post-it
+            </button>
+
+            <button
+              type="button"
+              onClick={
+                openFeedback
+              }
+            >
+              Feedback
             </button>
 
             <button
@@ -505,32 +576,6 @@ function LandingPage({
               </button>
             </div>
           </section>
-
-
-          <footer className="v2-footer">
-            <strong>
-              Get Connected
-            </strong>
-
-            <p>
-              An independent
-              student-built Mason
-              community.
-            </p>
-
-            <p>
-              Not affiliated with or
-              endorsed by George Mason
-              University.
-            </p>
-
-            <button
-              type="button"
-              onClick={onPrivacy}
-            >
-              Privacy & Site Information
-            </button>
-          </footer>
         </div>
       )}
     </main>
