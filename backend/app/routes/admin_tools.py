@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -7,16 +8,20 @@ from fastapi import (
     status,
 )
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
 from backend.app.models.post_it import PostIt
+from backend.app.models.profile import Profile
 from backend.app.models.user import User
 from backend.app.models.verification import (
     VerificationRequest,
 )
 from backend.app.routes.auth import require_admin
 from backend.app.schemas.admin_tools import (
+    AdminAccountDeleteRequest,
+    AdminAccountDeleteResponse,
     AdminAccountStatusRequest,
     AdminAccountStatusResponse,
     AdminPostItRemovalRequest,
@@ -32,6 +37,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/admin",
     tags=["Admin"],
+)
+
+
+PROFILE_PICTURE_DIR = (
+    Path(__file__)
+    .resolve()
+    .parent
+    .parent
+    .parent
+    / "uploads"
+    / "profile_pictures"
 )
 
 
@@ -274,5 +290,155 @@ def update_account_status(
         ),
         message=(
             "Account status updated"
+        ),
+    )
+
+
+@router.delete(
+    "/users/{user_id}",
+    response_model=AdminAccountDeleteResponse,
+)
+def permanently_delete_user(
+    user_id: int,
+    data: AdminAccountDeleteRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    target = db.get(
+        User,
+        user_id,
+    )
+
+    if target is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    if target.id == admin.id:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "You cannot permanently delete "
+                "your own admin account"
+            ),
+        )
+
+    if target.role == "admin":
+        raise HTTPException(
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Admin accounts cannot be "
+                "permanently deleted from "
+                "this tool"
+            ),
+        )
+
+    confirmation = (
+        data.confirm_username
+        .strip()
+    )
+
+    if confirmation != target.username:
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Username confirmation does "
+                "not match the account"
+            ),
+        )
+
+    reason = data.reason.strip()
+
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == target.id
+        )
+    )
+
+    picture_filename = None
+
+    if (
+        profile is not None
+        and profile.profile_picture
+    ):
+        picture_filename = (
+            profile.profile_picture
+        )
+
+    deleted_user_id = target.id
+    deleted_username = target.username
+
+    logger.warning(
+        "Admin %s permanently deleting "
+        "user %s (%s). Reason: %s",
+        admin.id,
+        target.id,
+        target.username,
+        reason,
+    )
+
+    try:
+        db.delete(target)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+        logger.exception(
+            "Permanent deletion failed "
+            "for user %s (%s) because a "
+            "database relationship blocked "
+            "the deletion.",
+            target.id,
+            target.username,
+        )
+
+        raise HTTPException(
+            status_code=
+                status.HTTP_409_CONFLICT,
+            detail=(
+                "This account could not be "
+                "permanently deleted because "
+                "related database records are "
+                "still protecting it. No data "
+                "was deleted."
+            ),
+        )
+
+    if picture_filename:
+        picture_path = (
+            PROFILE_PICTURE_DIR
+            / picture_filename
+        )
+
+        try:
+            if picture_path.exists():
+                picture_path.unlink()
+        except OSError:
+            logger.exception(
+                "User %s was deleted, but "
+                "profile picture %s could not "
+                "be removed from disk.",
+                deleted_user_id,
+                picture_filename,
+            )
+
+    logger.warning(
+        "Admin %s permanently deleted "
+        "user %s (%s).",
+        admin.id,
+        deleted_user_id,
+        deleted_username,
+    )
+
+    return AdminAccountDeleteResponse(
+        user_id=deleted_user_id,
+        username=deleted_username,
+        message=(
+            "Account permanently deleted"
         ),
     )

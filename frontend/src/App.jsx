@@ -6,6 +6,7 @@ import {
 import AdminDashboard from "./AdminDashboard";
 import BulletinBoard from "./BulletinBoard";
 import ChatPage from "./ChatPage";
+import LandingPage from "./LandingPage";
 import MyConnections from "./MyConnections";
 import MyProfile from "./MyProfile";
 import PrivacyPage from "./PrivacyPage";
@@ -26,6 +27,9 @@ import "./App.css";
 function App() {
   const [mode, setMode] =
     useState("login");
+
+  const [showAuth, setShowAuth] =
+    useState(false);
 
   const [showPrivacy, setShowPrivacy] =
     useState(() =>
@@ -190,6 +194,167 @@ function App() {
       cancelled = true;
     };
   }, [authToken]);
+
+
+
+  function openLoginPage() {
+    setMode("login");
+    setMessage("");
+    setShowAuth(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+
+  function openRegisterPage() {
+    setMode("register");
+    setMessage("");
+    setShowAuth(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+
+  function closeAuthPage() {
+    setShowAuth(false);
+    setMessage("");
+  }
+
+
+
+  // Automatically check pending accounts
+  // about every 45 seconds.
+  //
+  // We also check when the student
+  // returns to this browser tab.
+  useEffect(() => {
+    if (
+      !authToken ||
+      !currentUser ||
+      currentUser.role === "admin" ||
+      currentUser.verification_status !==
+        "pending"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    let checking = false;
+
+
+    async function checkPendingVerification() {
+      if (
+        checking ||
+        document.hidden
+      ) {
+        return;
+      }
+
+      checking = true;
+
+      try {
+        const user =
+          await getCurrentUser(
+            authToken
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setCurrentUser(user);
+
+
+        if (
+          user.verification_status ===
+          "verified"
+        ) {
+          setMessage("");
+
+          const shouldCelebrate =
+            user.verification_welcome_seen ===
+              false;
+
+          setShowCelebration(
+            shouldCelebrate
+          );
+
+          if (!shouldCelebrate) {
+            setStudentView(
+              "bulletin"
+            );
+          }
+        }
+
+
+        if (
+          user.verification_status ===
+          "needs_info"
+        ) {
+          setMessage(
+            "The admin needs a little more information before your verification can be completed."
+          );
+        }
+      } catch {
+        // Background checks stay quiet.
+        // The manual button will still
+        // show an error if something
+        // actually needs attention.
+      } finally {
+        checking = false;
+      }
+    }
+
+
+    const timer =
+      window.setInterval(
+        checkPendingVerification,
+        45000
+      );
+
+
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        checkPendingVerification();
+      }
+    }
+
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+
+    return () => {
+      cancelled = true;
+
+      window.clearInterval(
+        timer
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, [
+    authToken,
+    currentUser?.id,
+    currentUser?.role,
+    currentUser?.verification_status,
+    currentUser?.verification_welcome_seen,
+  ]);
+
 
 
   async function handleLogin(
@@ -443,6 +608,7 @@ function App() {
 
     setMessage("");
     setShowPrivacy(false);
+    setShowAuth(false);
   }
 
 
@@ -550,10 +716,22 @@ function App() {
             </p>
 
             <p>
-              You can stay logged in and
-              press the button below to
-              check whether your account
-              has been approved.
+              You can leave this page open
+              while your account is waiting
+              for review.
+            </p>
+
+            <p className="privacy-note">
+              <strong>
+                Automatic status check:
+              </strong>{" "}
+              Get Connected checks your
+              verification status about
+              every 45 seconds while this
+              page is open, and again when
+              you return to this tab.
+              You can also check manually
+              below.
             </p>
 
             <p className="privacy-note">
@@ -793,9 +971,30 @@ function App() {
   }
 
 
+  if (!showAuth) {
+    return (
+      <LandingPage
+        onLogin={openLoginPage}
+        onCreateAccount={
+          openRegisterPage
+        }
+        onPrivacy={openPrivacy}
+      />
+    );
+  }
+
+
   return (
     <main className="page">
       <section className="auth-card">
+        <button
+          className="auth-home-button"
+          type="button"
+          onClick={closeAuthPage}
+        >
+          ← Back to Home
+        </button>
+
         <div className="intro">
           <p className="small-title">
             A STUDENT-BUILT MASON COMMUNITY
