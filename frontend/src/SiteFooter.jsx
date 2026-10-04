@@ -18,15 +18,31 @@ function SiteFooter() {
   const [
     feedbackOpen,
     setFeedbackOpen,
-  ] = useState(false);
+  ] = useState(
+    () =>
+      window.history.state
+        ?.overlay === "feedback"
+  );
 
 
   const openFeedback =
     useCallback(
       () => {
-        setFeedbackOpen(
-          true
-        );
+        if (
+          window.history.state
+            ?.overlay !== "feedback"
+        ) {
+          window.history.pushState(
+            {
+              ...(window.history.state || {}),
+              overlay: "feedback",
+            },
+            "",
+            window.location.href
+          );
+        }
+
+        setFeedbackOpen(true);
       },
       []
     );
@@ -35,12 +51,42 @@ function SiteFooter() {
   const closeFeedback =
     useCallback(
       () => {
-        setFeedbackOpen(
-          false
-        );
+        if (
+          window.history.state
+            ?.overlay === "feedback"
+        ) {
+          window.history.back();
+          return;
+        }
+
+        setFeedbackOpen(false);
       },
       []
     );
+
+
+  useEffect(() => {
+    function handlePopState(
+      event
+    ) {
+      setFeedbackOpen(
+        event.state?.overlay ===
+          "feedback"
+      );
+    }
+
+    window.addEventListener(
+      "popstate",
+      handlePopState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        handlePopState
+      );
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -49,16 +95,13 @@ function SiteFooter() {
       openFeedback
     );
 
-
     return () => {
       window.removeEventListener(
         OPEN_FEEDBACK_EVENT,
         openFeedback
       );
     };
-  }, [
-    openFeedback,
-  ]);
+  }, [openFeedback]);
 
 
   return (
@@ -66,9 +109,7 @@ function SiteFooter() {
       <button
         type="button"
         className="global-feedback-button"
-        onClick={
-          openFeedback
-        }
+        onClick={openFeedback}
         aria-label="Send feedback"
       >
         Feedback
@@ -104,9 +145,7 @@ function SiteFooter() {
 
           <button
             type="button"
-            onClick={
-              openFeedback
-            }
+            onClick={openFeedback}
           >
             Feedback
           </button>
@@ -115,12 +154,8 @@ function SiteFooter() {
 
 
       <FeedbackModal
-        open={
-          feedbackOpen
-        }
-        onClose={
-          closeFeedback
-        }
+        open={feedbackOpen}
+        onClose={closeFeedback}
       />
     </>
   );

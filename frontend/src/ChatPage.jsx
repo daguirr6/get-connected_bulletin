@@ -7,7 +7,11 @@ import {
 import {
   getChatMessages,
   getChatWebSocketUrl,
+  getMyPresence,
+  getMyProfile,
+  getUserPresence,
   markChatRead,
+  updateMyPresence,
 } from "./api";
 
 import SafetyModal from "./SafetyModal";
@@ -62,6 +66,55 @@ function mergeMessages(
 }
 
 
+function presenceLabel(status) {
+  if (status === "online") {
+    return "Online";
+  }
+
+  if (status === "busy") {
+    return "Busy";
+  }
+
+  return "Offline";
+}
+
+
+function Avatar({
+  src,
+  name,
+  className = "",
+}) {
+  const initial =
+    name
+      ?.trim()
+      .charAt(0)
+      .toUpperCase() || "?";
+
+  if (src) {
+    return (
+      <img
+        className={
+          `chat-avatar-image ${className}`
+        }
+        src={src}
+        alt=""
+      />
+    );
+  }
+
+  return (
+    <div
+      className={
+        `chat-avatar-fallback ${className}`
+      }
+      aria-hidden="true"
+    >
+      {initial}
+    </div>
+  );
+}
+
+
 function ChatPage({
   token,
   currentUser,
@@ -90,10 +143,44 @@ function ChatPage({
     setShowSafety,
   ] = useState(false);
 
+  const [
+    myPresenceMode,
+    setMyPresenceMode,
+  ] = useState("online");
+
+  const [
+    otherPresence,
+    setOtherPresence,
+  ] = useState(
+    connection.presence_status ||
+      "offline"
+  );
+
+  const [
+    presenceSaving,
+    setPresenceSaving,
+  ] = useState(false);
+
+  const [
+    otherTyping,
+    setOtherTyping,
+  ] = useState(false);
+
+  const [
+    myProfilePicture,
+    setMyProfilePicture,
+  ] = useState(null);
+
   const socketRef =
     useRef(null);
 
   const reconnectTimerRef =
+    useRef(null);
+
+  const typingTimerRef =
+    useRef(null);
+
+  const otherTypingTimerRef =
     useRef(null);
 
   const shouldReconnectRef =
@@ -102,13 +189,35 @@ function ChatPage({
   const messageEndRef =
     useRef(null);
 
+  const composerRef =
+    useRef(null);
+
 
   useEffect(() => {
     messageEndRef.current
       ?.scrollIntoView({
         behavior: "smooth",
       });
-  }, [messages]);
+  }, [messages, otherTyping]);
+
+
+  useEffect(() => {
+    const textarea =
+      composerRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height =
+      "auto";
+
+    textarea.style.height =
+      `${Math.min(
+        textarea.scrollHeight,
+        150
+      )}px`;
+  }, [draft]);
 
 
   useEffect(() => {
@@ -166,6 +275,90 @@ function ChatPage({
 
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadMyChatIdentity() {
+      try {
+        const [
+          profile,
+          presence,
+        ] = await Promise.all([
+          getMyProfile(token),
+          getMyPresence(token),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setMyProfilePicture(
+          profile?.profile_picture_url ||
+            null
+        );
+
+        setMyPresenceMode(
+          presence.mode || "online"
+        );
+      } catch {
+        // The chat can still work without
+        // profile or presence decoration.
+      }
+    }
+
+    loadMyChatIdentity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshOtherPresence() {
+      try {
+        const presence =
+          await getUserPresence(
+            token,
+            connection.user_id
+          );
+
+        if (!cancelled) {
+          setOtherPresence(
+            presence.status ||
+              "offline"
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setOtherPresence(
+            "offline"
+          );
+        }
+      }
+    }
+
+    refreshOtherPresence();
+
+    const timer =
+      window.setInterval(
+        refreshOtherPresence,
+        15000
+      );
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    token,
+    connection.user_id,
+    myPresenceMode,
+  ]);
+
+
+  useEffect(() => {
     shouldReconnectRef.current =
       true;
 
@@ -218,7 +411,6 @@ function ChatPage({
           );
 
           setError("");
-
           return;
         }
 
@@ -233,6 +425,16 @@ function ChatPage({
                 [data]
               )
           );
+
+          if (
+            data.sender_id !==
+            currentUser.id
+          ) {
+            markChatRead(
+              token,
+              connection.id
+            ).catch(() => {});
+          }
 
           return;
         }
@@ -272,6 +474,39 @@ function ChatPage({
 
 
         if (
+          data.type === "typing" &&
+          data.user_id ===
+            connection.user_id
+        ) {
+          setOtherTyping(
+            Boolean(
+              data.is_typing
+            )
+          );
+
+          if (
+            otherTypingTimerRef.current
+          ) {
+            window.clearTimeout(
+              otherTypingTimerRef.current
+            );
+          }
+
+          if (data.is_typing) {
+            otherTypingTimerRef.current =
+              window.setTimeout(
+                () => {
+                  setOtherTyping(false);
+                },
+                2500
+              );
+          }
+
+          return;
+        }
+
+
+        if (
           data.type === "error"
         ) {
           setError(
@@ -301,7 +536,7 @@ function ChatPage({
           shouldReconnectRef.current
         ) {
           reconnectTimerRef.current =
-            setTimeout(
+            window.setTimeout(
               connectSocket,
               2000
             );
@@ -320,8 +555,22 @@ function ChatPage({
       if (
         reconnectTimerRef.current
       ) {
-        clearTimeout(
+        window.clearTimeout(
           reconnectTimerRef.current
+        );
+      }
+
+      if (typingTimerRef.current) {
+        window.clearTimeout(
+          typingTimerRef.current
+        );
+      }
+
+      if (
+        otherTypingTimerRef.current
+      ) {
+        window.clearTimeout(
+          otherTypingTimerRef.current
         );
       }
 
@@ -332,7 +581,60 @@ function ChatPage({
   }, [
     token,
     connection.id,
+    connection.user_id,
+    currentUser.id,
   ]);
+
+
+  function sendTypingState(
+    isTyping
+  ) {
+    if (
+      socketStatus !== "connected" ||
+      !socketRef.current
+    ) {
+      return;
+    }
+
+    socketRef.current.send(
+      JSON.stringify({
+        type: "typing",
+        is_typing: isTyping,
+      })
+    );
+  }
+
+
+  function handleDraftChange(
+    event
+  ) {
+    const value =
+      event.target.value;
+
+    setDraft(value);
+
+    if (
+      typingTimerRef.current
+    ) {
+      window.clearTimeout(
+        typingTimerRef.current
+      );
+    }
+
+    if (value.trim()) {
+      sendTypingState(true);
+
+      typingTimerRef.current =
+        window.setTimeout(
+          () => {
+            sendTypingState(false);
+          },
+          1200
+        );
+    } else {
+      sendTypingState(false);
+    }
+  }
 
 
   function sendMessage(event) {
@@ -363,8 +665,38 @@ function ChatPage({
       })
     );
 
+    sendTypingState(false);
+
     setDraft("");
     setError("");
+  }
+
+
+  async function handlePresenceChange(
+    event
+  ) {
+    const nextMode =
+      event.target.value;
+
+    setPresenceSaving(true);
+
+    try {
+      const result =
+        await updateMyPresence(
+          token,
+          nextMode
+        );
+
+      setMyPresenceMode(
+        result.mode || nextMode
+      );
+    } catch (presenceError) {
+      setError(
+        presenceError.message
+      );
+    } finally {
+      setPresenceSaving(false);
+    }
   }
 
 
@@ -396,6 +728,16 @@ function ChatPage({
   }
 
 
+  const otherAvatar =
+    connection.profile_picture_url ||
+    null;
+
+  const transportLabel =
+    socketStatus === "connected"
+      ? "Chat connected"
+      : "Reconnecting";
+
+
   return (
     <main className="chat-page">
       <section className="chat-shell">
@@ -404,31 +746,83 @@ function ChatPage({
             className="chat-back-button"
             type="button"
             onClick={onBack}
+            aria-label="Back"
           >
             ←
           </button>
 
           <div className="chat-person">
-            <div className="chat-avatar">
-              {connection
-                .display_name
-                .trim()
-                .charAt(0)
-                .toUpperCase()}
+            <div
+              className={
+                `chat-header-avatar ` +
+                `presence-${otherPresence}`
+              }
+            >
+              <Avatar
+                src={otherAvatar}
+                name={
+                  connection.display_name
+                }
+              />
+
+              <span
+                className="presence-dot"
+                aria-hidden="true"
+              />
             </div>
 
-            <div>
+            <div className="chat-person-copy">
               <h1>
                 {connection.display_name}
               </h1>
 
-              <p>
-                {connection.major}
-              </p>
+              <div className="chat-person-subline">
+                <span>
+                  {connection.major}
+                </span>
+
+                <span
+                  className={
+                    `chat-presence-text ` +
+                    `presence-${otherPresence}`
+                  }
+                >
+                  {presenceLabel(
+                    otherPresence
+                  )}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="chat-header-actions">
+            <label className="chat-presence-picker">
+              <span>
+                You
+              </span>
+
+              <select
+                value={myPresenceMode}
+                disabled={presenceSaving}
+                onChange={
+                  handlePresenceChange
+                }
+                aria-label="Your presence status"
+              >
+                <option value="online">
+                  Online
+                </option>
+
+                <option value="busy">
+                  Busy
+                </option>
+
+                <option value="invisible">
+                  Appear Offline
+                </option>
+              </select>
+            </label>
+
             <button
               className="chat-safety-button"
               type="button"
@@ -438,28 +832,28 @@ function ChatPage({
             >
               Safety
             </button>
-
-            <div
-              className={
-                `chat-status ` +
-                (
-                  socketStatus ===
-                  "connected"
-                    ? "online"
-                    : ""
-                )
-              }
-            >
-              <span>
-              </span>
-
-              {socketStatus ===
-              "connected"
-                ? "Live"
-                : "Connecting"}
-            </div>
           </div>
         </header>
+
+        <div className="chat-connection-strip">
+          <span
+            className={
+              socketStatus === "connected"
+                ? "transport-dot connected"
+                : "transport-dot"
+            }
+          />
+
+          {transportLabel}
+
+          {myPresenceMode ===
+            "invisible" && (
+            <span className="invisible-note">
+              · Appear Offline is hiding
+              everyone&apos;s status from you.
+            </span>
+          )}
+        </div>
 
 
         {error && (
@@ -472,12 +866,20 @@ function ChatPage({
         <section className="message-window">
           {loading ? (
             <div className="chat-empty">
+              <div className="chat-empty-pin">
+                ✦
+              </div>
+
               Loading messages...
             </div>
           ) : messages.length === 0 ? (
             <div className="chat-empty">
+              <div className="chat-empty-pin">
+                ✦
+              </div>
+
               <h2>
-                Say hello!
+                A fresh piece of paper.
               </h2>
 
               <p>
@@ -487,8 +889,8 @@ function ChatPage({
               </p>
 
               <p>
-                This is the beginning
-                of your conversation.
+                Say hello and see where
+                the conversation goes.
               </p>
             </div>
           ) : (
@@ -507,10 +909,22 @@ function ChatPage({
                     }
                     key={message.id}
                   >
-                    <div className="message-bubble">
-                      <p>
-                        {message.content}
-                      </p>
+                    {!isMine && (
+                      <Avatar
+                        src={otherAvatar}
+                        name={
+                          connection.display_name
+                        }
+                        className="message-avatar"
+                      />
+                    )}
+
+                    <div className="message-stack">
+                      <div className="message-bubble">
+                        <p>
+                          {message.content}
+                        </p>
+                      </div>
 
                       <div className="message-meta">
                         <span>
@@ -520,7 +934,13 @@ function ChatPage({
                         </span>
 
                         {isMine && (
-                          <span>
+                          <span
+                            className={
+                              message.read_at
+                                ? "read-state read"
+                                : "read-state"
+                            }
+                          >
                             {message.read_at
                               ? "Read"
                               : "Sent"}
@@ -528,10 +948,45 @@ function ChatPage({
                         )}
                       </div>
                     </div>
+
+                    {isMine && (
+                      <Avatar
+                        src={
+                          myProfilePicture
+                        }
+                        name={
+                          currentUser.username
+                        }
+                        className="message-avatar"
+                      />
+                    )}
                   </article>
                 );
               }
             )
+          )}
+
+          {otherTyping && (
+            <div className="typing-row">
+              <Avatar
+                src={otherAvatar}
+                name={
+                  connection.display_name
+                }
+                className="message-avatar"
+              />
+
+              <div className="typing-bubble">
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <small>
+                {connection.display_name}{" "}
+                is typing
+              </small>
+            </div>
           )}
 
           <div
@@ -540,54 +995,73 @@ function ChatPage({
         </section>
 
 
-        <form
-          className="chat-composer"
-          onSubmit={sendMessage}
-        >
-          <textarea
-            rows="1"
-            maxLength="2000"
-            value={draft}
-            onChange={(event) =>
-              setDraft(
-                event.target.value
-              )
-            }
-            onKeyDown={(
-              event
-            ) => {
-              if (
-                event.key === "Enter" &&
-                !event.shiftKey
-              ) {
-                event.preventDefault();
-
-                sendMessage(
-                  event
-                );
-              }
-            }}
-            placeholder={
-              `Message ${connection.display_name}...`
-            }
-          />
-
-          <button
-            type="submit"
-            disabled={
-              !draft.trim() ||
-              socketStatus !==
-                "connected"
-            }
+        <div className="composer-area">
+          <form
+            className="chat-composer"
+            onSubmit={sendMessage}
           >
-            Send
-          </button>
-        </form>
+            <div
+              className="composer-spark"
+              aria-hidden="true"
+            >
+              ✦
+            </div>
 
-        <p className="chat-hint">
-          Enter to send ·
-          Shift + Enter for a new line
-        </p>
+            <textarea
+              ref={composerRef}
+              rows="1"
+              maxLength="2000"
+              value={draft}
+              onChange={
+                handleDraftChange
+              }
+              onKeyDown={(
+                event
+              ) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey
+                ) {
+                  event.preventDefault();
+                  sendMessage(event);
+                }
+              }}
+              placeholder={
+                `Message ${connection.display_name}...`
+              }
+              spellCheck={true}
+              autoCorrect="on"
+              autoCapitalize="sentences"
+              lang="en"
+            />
+
+            <button
+              type="submit"
+              disabled={
+                !draft.trim() ||
+                socketStatus !==
+                  "connected"
+              }
+              aria-label="Send message"
+            >
+              <span>
+                Send
+              </span>
+
+              <strong
+                aria-hidden="true"
+              >
+                ➜
+              </strong>
+            </button>
+          </form>
+
+          <p className="chat-hint">
+            Enter to send ·
+            Shift + Enter for a new line ·
+            Browser spellcheck is enabled
+          </p>
+        </div>
       </section>
 
 

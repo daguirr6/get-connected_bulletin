@@ -10,6 +10,8 @@ import {
   getConnections,
   getConnectionSuggestions,
   getMyBlocks,
+  getMyPresence,
+  updateMyPresence,
 } from "./api";
 
 
@@ -51,22 +53,44 @@ function MyConnections({
   ] = useState(null);
 
 
+  const [
+    presenceMode,
+    setPresenceMode,
+  ] = useState("online");
+
+  const [
+    presenceSaving,
+    setPresenceSaving,
+  ] = useState(false);
+
+
   const loadConnections =
     useCallback(
-      async () => {
-        setLoading(true);
-        setMessage("");
+      async (
+        showLoading = true
+      ) => {
+        if (showLoading) {
+          setLoading(true);
+          setMessage("");
+        }
 
         try {
           const [
             connectionData,
             chatData,
             blockData,
+            presenceData,
           ] = await Promise.all([
             getConnections(token),
             getChats(token),
             getMyBlocks(token),
+            getMyPresence(token),
           ]);
+
+          setPresenceMode(
+            presenceData.mode ||
+              "online"
+          );
 
           const blockedUserIds =
             new Set(
@@ -126,7 +150,9 @@ function MyConnections({
             error.message
           );
         } finally {
-          setLoading(false);
+          if (showLoading) {
+            setLoading(false);
+          }
         }
       },
       [token]
@@ -136,6 +162,82 @@ function MyConnections({
   useEffect(() => {
     loadConnections();
   }, [loadConnections]);
+
+
+  useEffect(() => {
+    const timer =
+      window.setInterval(
+        () => {
+          loadConnections(false);
+        },
+        20000
+      );
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [loadConnections]);
+
+
+  async function handlePresenceChange(
+    event
+  ) {
+    const nextMode =
+      event.target.value;
+
+    setPresenceSaving(true);
+    setMessage("");
+
+    try {
+      const result =
+        await updateMyPresence(
+          token,
+          nextMode
+        );
+
+      setPresenceMode(
+        result.mode || nextMode
+      );
+
+      await loadConnections(false);
+    } catch (error) {
+      setMessage(
+        error.message
+      );
+    } finally {
+      setPresenceSaving(false);
+    }
+  }
+
+
+  function presenceLabel(
+    status
+  ) {
+    if (status === "online") {
+      return "Online";
+    }
+
+    if (status === "busy") {
+      return "Busy";
+    }
+
+    return "Offline";
+  }
+
+
+  function presenceColor(
+    status
+  ) {
+    if (status === "online") {
+      return "#20a65a";
+    }
+
+    if (status === "busy") {
+      return "#d7a51e";
+    }
+
+    return "#a7aaa7";
+  }
 
 
   async function handleConnect(
@@ -226,6 +328,53 @@ function MyConnections({
         </div>
 
         <div className="bulletin-header-actions">
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "7px 10px",
+              border: "1px solid #d7cfaa",
+              borderRadius: "999px",
+              background: "#fffbea",
+              color: "#4e5b52",
+              fontSize: "12px",
+              fontWeight: 800,
+            }}
+          >
+            <span>
+              My status
+            </span>
+
+            <select
+              value={presenceMode}
+              disabled={presenceSaving}
+              onChange={
+                handlePresenceChange
+              }
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#006633",
+                fontWeight: 900,
+                cursor: "pointer",
+                outline: "none",
+              }}
+            >
+              <option value="online">
+                Online
+              </option>
+
+              <option value="busy">
+                Busy
+              </option>
+
+              <option value="invisible">
+                Appear Offline
+              </option>
+            </select>
+          </label>
+
           <button
             className="header-button"
             type="button"
@@ -250,6 +399,24 @@ function MyConnections({
       {message && (
         <div className="bulletin-message">
           {message}
+        </div>
+      )}
+
+
+      {presenceMode ===
+        "invisible" && (
+        <div
+          className="bulletin-message"
+          style={{
+            background: "#f1efe6",
+            borderColor: "#d3cfbe",
+            color: "#626862",
+          }}
+        >
+          Appear Offline is on. Other
+          students see you as offline,
+          and everyone else appears
+          offline to you too.
         </div>
       )}
 
@@ -312,16 +479,109 @@ function MyConnections({
                     }
                   >
                     <div className="verification-info">
-                      <p className="small-title">
-                        CONNECTED
-                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "relative",
+                            width: "48px",
+                            height: "48px",
+                            flex: "0 0 48px",
+                          }}
+                        >
+                          {chat?.profile_picture_url ? (
+                            <img
+                              src={
+                                chat.profile_picture_url
+                              }
+                              alt=""
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                objectFit: "cover",
+                                borderRadius: "50%",
+                                border: "2px solid #fffbea",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                display: "grid",
+                                placeItems: "center",
+                                borderRadius: "50%",
+                                background: "#006633",
+                                color: "white",
+                                fontWeight: 900,
+                                fontSize: "20px",
+                              }}
+                            >
+                              {connection.display_name
+                                .trim()
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                          )}
 
-                      <h3>
-                        {
-                          connection
-                            .display_name
-                        }
-                      </h3>
+                          <span
+                            title={
+                              presenceLabel(
+                                chat?.presence_status
+                              )
+                            }
+                            style={{
+                              position: "absolute",
+                              right: "0",
+                              bottom: "1px",
+                              width: "12px",
+                              height: "12px",
+                              borderRadius: "50%",
+                              border: "2px solid #fff",
+                              background:
+                                presenceColor(
+                                  chat?.presence_status
+                                ),
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="small-title">
+                            CONNECTED
+                          </p>
+
+                          <h3>
+                            {
+                              connection
+                                .display_name
+                            }
+                          </h3>
+
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              color:
+                                presenceColor(
+                                  chat?.presence_status
+                                ),
+                            }}
+                          >
+                            {presenceLabel(
+                              chat?.presence_status
+                            )}
+                          </p>
+                        </div>
+                      </div>
 
                       <p>
                         <strong>
@@ -374,9 +634,15 @@ function MyConnections({
                         className="verify-button"
                         type="button"
                         onClick={() =>
-                          onOpenChat(
-                            connection
-                          )
+                          onOpenChat({
+                            ...connection,
+                            profile_picture_url:
+                              chat?.profile_picture_url ||
+                              null,
+                            presence_status:
+                              chat?.presence_status ||
+                              "offline",
+                          })
                         }
                       >
                         {chat

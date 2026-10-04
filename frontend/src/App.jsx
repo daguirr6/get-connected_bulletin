@@ -19,6 +19,7 @@ import {
   loginUser,
   markVerificationWelcomeSeen,
   registerUser,
+  sendPresenceHeartbeat,
 } from "./api";
 
 import "./App.css";
@@ -91,13 +92,123 @@ function App() {
   ] = useState(null);
 
 
+  function applyLocationState(
+    historyState = window.history.state
+  ) {
+    const pathname =
+      window.location.pathname;
+
+    setShowPrivacy(false);
+    setShowAuth(false);
+
+    if (pathname === "/privacy") {
+      setShowPrivacy(true);
+      return;
+    }
+
+    if (pathname === "/login") {
+      setMode("login");
+      setShowAuth(true);
+      return;
+    }
+
+    if (pathname === "/register") {
+      setMode("register");
+      setShowAuth(true);
+      return;
+    }
+
+    setSelectedProfileUserId(null);
+    setSelectedChat(null);
+
+    if (pathname === "/connections") {
+      setStudentView("connections");
+      return;
+    }
+
+    if (pathname === "/my-profile") {
+      setStudentView("my-profile");
+      return;
+    }
+
+    if (pathname === "/safety") {
+      setStudentView("safety-center");
+      return;
+    }
+
+    if (pathname.startsWith("/profiles/")) {
+      const userId = Number(
+        pathname.split("/")[2]
+      );
+
+      if (Number.isInteger(userId)) {
+        setSelectedProfileUserId(userId);
+        setStudentView("profile");
+        return;
+      }
+    }
+
+    if (pathname.startsWith("/chats/")) {
+      const savedChat =
+        historyState?.selectedChat;
+
+      if (savedChat) {
+        setSelectedChat(savedChat);
+        setStudentView("chat");
+        return;
+      }
+
+      // A direct refresh of a chat URL does
+      // not contain the connection object.
+      // Connections is the safest fallback.
+      setStudentView("connections");
+      return;
+    }
+
+    setStudentView("bulletin");
+  }
+
+
+  function pushRoute(
+    path,
+    state = {}
+  ) {
+    window.history.pushState(
+      state,
+      "",
+      path
+    );
+
+    applyLocationState(state);
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }
+
+
   useEffect(() => {
-    function handlePopState() {
-      setShowPrivacy(
-        window.location.pathname ===
-          "/privacy"
+    function handlePopState(
+      event
+    ) {
+      applyLocationState(
+        event.state
       );
     }
+
+    if (!window.history.state) {
+      window.history.replaceState(
+        { view: "initial" },
+        "",
+        window.location.pathname
+      );
+    }
+
+    applyLocationState(
+      window.history.state
+    );
 
     window.addEventListener(
       "popstate",
@@ -114,25 +225,17 @@ function App() {
 
 
   function openPrivacy() {
-    window.history.pushState(
-      {},
-      "",
-      "/privacy"
+    pushRoute(
+      "/privacy",
+      { view: "privacy" }
     );
-
-    setShowPrivacy(true);
   }
 
 
   function closePrivacy() {
-    window.history.pushState(
-      {},
-      "",
-      "/"
-    );
-
-    setShowPrivacy(false);
+    window.history.back();
   }
+
 
 
   useEffect(() => {
@@ -198,32 +301,28 @@ function App() {
 
 
   function openLoginPage() {
-    setMode("login");
     setMessage("");
-    setShowAuth(true);
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    pushRoute(
+      "/login",
+      { view: "login" }
+    );
   }
 
 
   function openRegisterPage() {
-    setMode("register");
     setMessage("");
-    setShowAuth(true);
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    pushRoute(
+      "/register",
+      { view: "register" }
+    );
   }
 
 
   function closeAuthPage() {
-    setShowAuth(false);
     setMessage("");
+    window.history.back();
   }
 
 
@@ -357,6 +456,84 @@ function App() {
 
 
 
+  // Keep presence fresh while a verified
+  // student is actively using the site.
+  // If heartbeats stop, the backend
+  // automatically treats them as offline.
+  useEffect(() => {
+    if (
+      !authToken ||
+      !currentUser ||
+      currentUser.role === "admin" ||
+      currentUser.verification_status !==
+        "verified"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function heartbeat() {
+      if (
+        cancelled ||
+        document.hidden
+      ) {
+        return;
+      }
+
+      try {
+        await sendPresenceHeartbeat(
+          authToken
+        );
+      } catch {
+        // Presence should never interrupt
+        // the rest of the site.
+      }
+    }
+
+    heartbeat();
+
+    const timer =
+      window.setInterval(
+        heartbeat,
+        25000
+      );
+
+    function handleVisibilityChange() {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        heartbeat();
+      }
+    }
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
+    return () => {
+      cancelled = true;
+
+      window.clearInterval(
+        timer
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
+    };
+  }, [
+    authToken,
+    currentUser?.id,
+    currentUser?.role,
+    currentUser?.verification_status,
+  ]);
+
+
+
   async function handleLogin(
     event
   ) {
@@ -387,6 +564,14 @@ function App() {
         );
 
       setCurrentUser(user);
+      setShowAuth(false);
+      setShowPrivacy(false);
+
+      window.history.replaceState(
+        { view: "bulletin" },
+        "",
+        "/bulletin"
+      );
 
       setStudentView(
         "bulletin"
@@ -542,6 +727,12 @@ function App() {
         false
       );
 
+      window.history.replaceState(
+        { view: "bulletin" },
+        "",
+        "/bulletin"
+      );
+
       setStudentView(
         "bulletin"
       );
@@ -556,12 +747,13 @@ function App() {
   function openProfile(
     userId
   ) {
-    setSelectedProfileUserId(
-      userId
-    );
-
-    setStudentView(
-      "profile"
+    pushRoute(
+      `/profiles/${userId}`,
+      {
+        view: "profile",
+        selectedProfileUserId:
+          userId,
+      }
     );
   }
 
@@ -569,12 +761,13 @@ function App() {
   function openChat(
     connection
   ) {
-    setSelectedChat(
-      connection
-    );
-
-    setStudentView(
-      "chat"
+    pushRoute(
+      `/chats/${connection.id}`,
+      {
+        view: "chat",
+        selectedChat:
+          connection,
+      }
     );
   }
 
@@ -609,6 +802,12 @@ function App() {
     setMessage("");
     setShowPrivacy(false);
     setShowAuth(false);
+
+    window.history.replaceState(
+      { view: "landing" },
+      "",
+      "/"
+    );
   }
 
 
@@ -833,9 +1032,7 @@ function App() {
             currentUser
           }
           onBackToBulletin={() =>
-            setStudentView(
-              "bulletin"
-            )
+            window.history.back()
           }
           onLogout={
             handleLogout
@@ -853,9 +1050,7 @@ function App() {
         <SafetyCenter
           token={authToken}
           onBack={() =>
-            setStudentView(
-              "bulletin"
-            )
+            window.history.back()
           }
           onLogout={
             handleLogout
@@ -878,15 +1073,9 @@ function App() {
           connection={
             selectedChat
           }
-          onBack={() => {
-            setSelectedChat(
-              null
-            );
-
-            setStudentView(
-              "connections"
-            );
-          }}
+          onBack={() =>
+            window.history.back()
+          }
         />
       );
     }
@@ -902,15 +1091,9 @@ function App() {
           userId={
             selectedProfileUserId
           }
-          onBack={() => {
-            setSelectedProfileUserId(
-              null
-            );
-
-            setStudentView(
-              "connections"
-            );
-          }}
+          onBack={() =>
+            window.history.back()
+          }
         />
       );
     }
@@ -930,9 +1113,7 @@ function App() {
             openChat
           }
           onBackToBulletin={() =>
-            setStudentView(
-              "bulletin"
-            )
+            window.history.back()
           }
           onLogout={
             handleLogout
@@ -949,18 +1130,21 @@ function App() {
           currentUser
         }
         onOpenMyProfile={() =>
-          setStudentView(
-            "my-profile"
+          pushRoute(
+            "/my-profile",
+            { view: "my-profile" }
           )
         }
         onOpenConnections={() =>
-          setStudentView(
-            "connections"
+          pushRoute(
+            "/connections",
+            { view: "connections" }
           )
         }
         onOpenSafetyCenter={() =>
-          setStudentView(
-            "safety-center"
+          pushRoute(
+            "/safety",
+            { view: "safety-center" }
           )
         }
         onLogout={

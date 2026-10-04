@@ -656,7 +656,19 @@ export async function getChats(
     }
   );
 
-  return readJson(response);
+  const chats =
+    await readJson(response);
+
+  return chats.map(
+    (chat) => ({
+      ...chat,
+
+      profile_picture_url:
+        makeAssetUrl(
+          chat.profile_picture_url
+        ),
+    })
+  );
 }
 
 
@@ -766,3 +778,81 @@ export async function reportUser(
 
   return readJson(response);
 }
+
+export async function sendPresenceHeartbeat(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/chats/presence/heartbeat`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function getMyPresence(
+  token
+) {
+  const response = await fetch(
+    `${API_URL}/chats/presence/me`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function updateMyPresence(
+  token,
+  mode
+) {
+  const response = await fetch(
+    `${API_URL}/chats/presence/me`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+
+        Authorization:
+          `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        mode,
+      }),
+    }
+  );
+
+  return readJson(response);
+}
+
+
+export async function getUserPresence(
+  token,
+  userId
+) {
+  const response = await fetch(
+    `${API_URL}/chats/presence/${userId}`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+
+  return readJson(response);
+}
+

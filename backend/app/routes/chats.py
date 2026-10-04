@@ -1,6 +1,7 @@
 import asyncio
 from datetime import (
     datetime,
+    timedelta,
     timezone,
 )
 
@@ -13,6 +14,7 @@ from fastapi import (
     status,
 )
 from sqlalchemy import (
+    and_,
     func,
     or_,
     select,
@@ -35,6 +37,9 @@ from backend.app.models.message import (
 from backend.app.models.post_it import (
     PostIt,
 )
+from backend.app.models.profile import (
+    Profile,
+)
 from backend.app.models.user import (
     User,
 )
@@ -53,6 +58,8 @@ from backend.app.schemas.chat import (
     MarkReadResponse,
     MessageCreate,
     MessageResponse,
+    PresenceResponse,
+    PresenceUpdate,
 )
 from backend.app.security import (
     decode_access_token,
@@ -122,6 +129,255 @@ def get_other_user_id(
 
     return (
         connection.user_one_id
+    )
+
+
+PRESENCE_TIMEOUT = timedelta(
+    seconds=70
+)
+
+
+def presence_is_fresh(
+    last_seen_at: datetime | None,
+) -> bool:
+    if last_seen_at is None:
+        return False
+
+    if last_seen_at.tzinfo is None:
+        last_seen_at = (
+            last_seen_at.replace(
+                tzinfo=timezone.utc
+            )
+        )
+
+    return (
+        datetime.now(timezone.utc)
+        - last_seen_at
+        <= PRESENCE_TIMEOUT
+    )
+
+
+def get_visible_presence(
+    viewer: User,
+    target: User,
+) -> str:
+    # Invisible mode is reciprocal.
+    # If you hide your own status,
+    # everybody else appears offline too.
+    if (
+        viewer.presence_mode
+        == "invisible"
+    ):
+        return "offline"
+
+    if (
+        target.presence_mode
+        == "invisible"
+    ):
+        return "offline"
+
+    if not presence_is_fresh(
+        target.last_seen_at
+    ):
+        return "offline"
+
+    if target.presence_mode == "busy":
+        return "busy"
+
+    return "online"
+
+
+def get_profile_picture_url(
+    db: Session,
+    user_id: int,
+) -> str | None:
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user_id
+        )
+    )
+
+    if (
+        profile is None
+        or profile.status != "approved"
+        or not profile.profile_picture
+    ):
+        return None
+
+    return (
+        "/uploads/profile_pictures/"
+        f"{profile.profile_picture}"
+    )
+
+
+def users_are_connected(
+    db: Session,
+    first_user_id: int,
+    second_user_id: int,
+) -> bool:
+    connection = db.scalar(
+        select(Connection).where(
+            or_(
+                and_(
+                    Connection.user_one_id
+                    == first_user_id,
+                    Connection.user_two_id
+                    == second_user_id,
+                ),
+                and_(
+                    Connection.user_one_id
+                    == second_user_id,
+                    Connection.user_two_id
+                    == first_user_id,
+                ),
+            )
+        )
+    )
+
+    return connection is not None
+
+
+@router.post(
+    "/presence/heartbeat",
+    response_model=PresenceResponse,
+)
+def heartbeat_presence(
+    user: User = Depends(
+        require_verified_user
+    ),
+    db: Session = Depends(
+        get_db
+    ),
+):
+    user.last_seen_at = (
+        datetime.now(timezone.utc)
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    return PresenceResponse(
+        user_id=user.id,
+        mode=user.presence_mode,
+        status=(
+            "offline"
+            if user.presence_mode
+            == "invisible"
+            else user.presence_mode
+        ),
+        last_seen_at=user.last_seen_at,
+    )
+
+
+@router.get(
+    "/presence/me",
+    response_model=PresenceResponse,
+)
+def get_my_presence(
+    user: User = Depends(
+        require_verified_user
+    ),
+):
+    return PresenceResponse(
+        user_id=user.id,
+        mode=user.presence_mode,
+        status=(
+            "offline"
+            if user.presence_mode
+            == "invisible"
+            else (
+                user.presence_mode
+                if presence_is_fresh(
+                    user.last_seen_at
+                )
+                else "offline"
+            )
+        ),
+        last_seen_at=user.last_seen_at,
+    )
+
+
+@router.patch(
+    "/presence/me",
+    response_model=PresenceResponse,
+)
+def update_my_presence(
+    data: PresenceUpdate,
+    user: User = Depends(
+        require_verified_user
+    ),
+    db: Session = Depends(
+        get_db
+    ),
+):
+    user.presence_mode = data.mode
+    user.last_seen_at = (
+        datetime.now(timezone.utc)
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    return PresenceResponse(
+        user_id=user.id,
+        mode=user.presence_mode,
+        status=(
+            "offline"
+            if user.presence_mode
+            == "invisible"
+            else user.presence_mode
+        ),
+        last_seen_at=user.last_seen_at,
+    )
+
+
+@router.get(
+    "/presence/{target_user_id}",
+    response_model=PresenceResponse,
+)
+def get_user_presence(
+    target_user_id: int,
+    user: User = Depends(
+        require_verified_user
+    ),
+    db: Session = Depends(
+        get_db
+    ),
+):
+    if not users_are_connected(
+        db,
+        user.id,
+        target_user_id,
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_403_FORBIDDEN,
+            detail=(
+                "Presence is only available "
+                "for your connections"
+            ),
+        )
+
+    target = db.get(
+        User,
+        target_user_id,
+    )
+
+    if target is None:
+        raise HTTPException(
+            status_code=
+                status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    return PresenceResponse(
+        user_id=target.id,
+        mode=None,
+        status=get_visible_presence(
+            user,
+            target,
+        ),
+        last_seen_at=None,
     )
 
 
@@ -267,6 +523,20 @@ def get_chats(
 
                 major=
                     verification.major,
+
+                profile_picture_url=(
+                    get_profile_picture_url(
+                        db,
+                        other_user_id,
+                    )
+                ),
+
+                presence_status=(
+                    get_visible_presence(
+                        user,
+                        other_user,
+                    )
+                ),
 
                 last_message=(
                     last_message.content
@@ -806,10 +1076,88 @@ async def chat_websocket(
 
                 continue
 
-            if (
-                data.get("type")
-                != "message"
-            ):
+            message_type = data.get(
+                "type"
+            )
+
+            if message_type == "typing":
+                is_typing = bool(
+                    data.get(
+                        "is_typing",
+                        False,
+                    )
+                )
+
+                recipient_id = None
+                can_send_typing = False
+
+                with SessionLocal() as db:
+                    user = db.get(
+                        User,
+                        user_id,
+                    )
+
+                    connection = db.get(
+                        Connection,
+                        connection_id,
+                    )
+
+                    if (
+                        user is not None
+                        and connection is not None
+                        and user.account_status
+                        == "active"
+                        and user.verification_status
+                        == "verified"
+                    ):
+                        belongs_to_user = (
+                            connection.user_one_id
+                            == user.id
+                            or
+                            connection.user_two_id
+                            == user.id
+                        )
+
+                        if belongs_to_user:
+                            recipient_id = (
+                                get_other_user_id(
+                                    connection,
+                                    user.id,
+                                )
+                            )
+
+                            can_send_typing = (
+                                not has_blocked(
+                                    db,
+                                    user.id,
+                                    recipient_id,
+                                )
+                                and
+                                not has_blocked(
+                                    db,
+                                    recipient_id,
+                                    user.id,
+                                )
+                            )
+
+                if (
+                    can_send_typing
+                    and recipient_id
+                    is not None
+                ):
+                    await manager.send_to_user(
+                        connection_id,
+                        recipient_id,
+                        {
+                            "type": "typing",
+                            "user_id": user_id,
+                            "is_typing": is_typing,
+                        },
+                    )
+
+                continue
+
+            if message_type != "message":
                 await websocket.send_json(
                     {
                         "type": "error",
