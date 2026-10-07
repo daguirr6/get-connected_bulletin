@@ -13,6 +13,7 @@ class PendingVerificationResponse(BaseModel):
     major: str
     status: str
     submitted_at: datetime
+    student_response: str | None = None
 
 
 class VerificationUpdateRequest(BaseModel):

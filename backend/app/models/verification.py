@@ -44,6 +44,11 @@ class VerificationRequest(Base):
         nullable=True,
     )
 
+    student_response: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -856,3 +856,16 @@ export async function getUserPresence(
   return readJson(response);
 }
 
+
+
+export async function replyToVerification(token, response) {
+  const result = await fetch(`${API_URL}/auth/verification/reply`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ response }),
+  });
+  return readJson(result);
+}

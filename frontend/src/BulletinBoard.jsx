@@ -9,6 +9,7 @@ import {
   createConnection,
   createPostIt,
   getConnections,
+  getChats,
   getMyPostIt,
   getPostIts,
   updateMyPostIt,
@@ -293,6 +294,8 @@ function BulletinBoard({
   const [connections, setConnections] =
     useState([]);
 
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
   const [loading, setLoading] =
     useState(true);
 
@@ -353,6 +356,20 @@ function BulletinBoard({
       [token]
     );
 
+
+  useEffect(() => {
+    let cancelled = false;
+    async function updateUnread() {
+      try {
+        const chats = await getChats(token);
+        if (!cancelled) setUnreadMessages(chats.reduce((sum, chat) => sum + (chat.unread_count || 0), 0));
+      } catch {
+        // An occasional failed poll should not interrupt the bulletin.
+      }
+    }
+    const interval = window.setInterval(updateUnread, 15000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [token]);
 
   const connectedUserIds =
     useMemo(
@@ -460,10 +477,12 @@ function BulletinBoard({
             boardData,
             myPostData,
             connectionData,
+            chatData,
           ] = await Promise.all([
             getPostIts(token),
             getMyPostIt(token),
             getConnections(token),
+            getChats(token),
           ]);
 
           setPostIts(
@@ -477,6 +496,7 @@ function BulletinBoard({
           setConnections(
             connectionData
           );
+          setUnreadMessages(chatData.reduce((sum, chat) => sum + (chat.unread_count || 0), 0));
 
           if (myPostData) {
             setDisplayName(
@@ -850,8 +870,7 @@ function BulletinBoard({
               onOpenConnections
             }
           >
-            Connections (
-            {connections.length})
+            Connections{unreadMessages > 0 ? ` (${unreadMessages > 99 ? "99+" : unreadMessages})` : ""}
           </button>
 
           <button

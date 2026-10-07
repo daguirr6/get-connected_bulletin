@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from fastapi import (
     APIRouter,
     Depends,
@@ -22,6 +23,7 @@ from backend.app.rate_limit import (
 )
 from backend.app.schemas.auth import (
     CurrentUserResponse,
+    VerificationReplyRequest,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
@@ -140,6 +142,12 @@ def login_user(
             ),
         )
 
+    if user.account_status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+        )
+
     if not verify_password(
         data.password,
         user.password_hash,
@@ -245,6 +253,34 @@ def require_verified_user(
     return user
 
 
+@router.post("/verification/reply")
+def reply_to_verification(
+    data: VerificationReplyRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if user.verification_status != "needs_info":
+        raise HTTPException(status_code=409, detail="No information request is pending")
+
+    request = db.scalar(
+        select(VerificationRequest).where(VerificationRequest.user_id == user.id)
+    )
+    if request is None or request.status != "needs_info":
+        raise HTTPException(status_code=409, detail="No information request is pending")
+
+    response = data.response.strip()
+    if len(response) < 3:
+        raise HTTPException(status_code=422, detail="Please enter a response")
+
+    request.student_response = response
+    request.status = "pending"
+    request.submitted_at = datetime.now(timezone.utc)
+    request.reviewed_at = None
+    user.verification_status = "pending"
+    db.commit()
+    return {"message": "Your information was sent for review", "verification_status": "pending"}
+
+
 @router.get(
     "/me",
     response_model=CurrentUserResponse,
@@ -262,6 +298,12 @@ def current_user(
             user.verification_status,
         verification_welcome_seen=(
             user.verification_welcome_seen
+        ),
+        verification_admin_note=(
+            user.verification_request.admin_note
+            if user.verification_status == "needs_info"
+            and user.verification_request is not None
+            else None
         ),
     )
 

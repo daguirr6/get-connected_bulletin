@@ -19,6 +19,7 @@ import {
   loginUser,
   markVerificationWelcomeSeen,
   registerUser,
+  replyToVerification,
   sendPresenceHeartbeat,
 } from "./api";
 
@@ -49,6 +50,8 @@ function App() {
 
   const [major, setMajor] =
     useState("");
+
+  const [verificationReply, setVerificationReply] = useState("");
 
   const [message, setMessage] =
     useState("");
@@ -646,6 +649,23 @@ function App() {
   }
 
 
+  async function submitVerificationReply(event) {
+    event.preventDefault();
+    if (!verificationReply.trim()) return;
+    setLoading(true);
+    setMessage("");
+    try {
+      await replyToVerification(authToken, verificationReply.trim());
+      setVerificationReply("");
+      setCurrentUser(await getCurrentUser(authToken));
+      setMessage("Your response has been sent to the admin for review.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function refreshVerificationStatus() {
     if (!authToken) {
       return;
@@ -1005,6 +1025,26 @@ function App() {
             <div className="status-badge">
               More Information Needed
             </div>
+
+            <p><strong>Message from the admin:</strong></p>
+            <p>{currentUser.verification_admin_note || "Please provide the additional details requested by the admin."}</p>
+            <form onSubmit={submitVerificationReply} style={{ width: "100%" }}>
+              <label htmlFor="verification-reply">Your response</label>
+              <textarea
+                id="verification-reply"
+                rows={5}
+                maxLength={2000}
+                required
+                value={verificationReply}
+                onChange={(event) => setVerificationReply(event.target.value)}
+                placeholder="Explain or correct your student information here. Never share passwords or Duo codes."
+                style={{ width: "100%", margin: "12px 0", padding: "10px" }}
+              />
+              <button className="main-button" type="submit" disabled={loading || !verificationReply.trim()}>
+                {loading ? "Submitting..." : "Send Information"}
+              </button>
+            </form>
+            {message && <p role="status">{message}</p>}
 
             <button
               className="main-button"

@@ -743,6 +743,9 @@ function AdminDashboard({
                       {request.major}
                     </p>
 
+                    {request.student_response && (
+                      <p><strong>Student's additional information:</strong> {request.student_response}</p>
+                    )}
                     <p className="verification-id">
                       Student account ID:{" "}
                       {

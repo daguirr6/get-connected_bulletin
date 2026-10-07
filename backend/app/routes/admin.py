@@ -72,6 +72,7 @@ def get_pending_verifications(
             major=request.major,
             status=request.status,
             submitted_at=request.submitted_at,
+            student_response=request.student_response,
         )
         for request in requests
     ]
@@ -109,8 +110,13 @@ def update_verification(
             detail="User not found",
         )
 
+    if data.status == "needs_info" and not (data.admin_note or "").strip():
+        raise HTTPException(status_code=400, detail="Explain what information is needed")
+
     verification.status = data.status
     verification.admin_note = data.admin_note
+    if data.status == "needs_info":
+        verification.student_response = None
 
     verification.reviewed_at = datetime.now(
         timezone.utc

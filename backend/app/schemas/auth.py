@@ -46,9 +46,14 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class VerificationReplyRequest(BaseModel):
+    response: str = Field(min_length=3, max_length=2000)
+
+
 class CurrentUserResponse(BaseModel):
     id: int
     username: str
     role: str
     verification_status: str
     verification_welcome_seen: bool
+    verification_admin_note: str | None = None

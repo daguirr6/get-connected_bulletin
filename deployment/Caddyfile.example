@@ -1,0 +1,32 @@
+# Example for the local HTTP listener behind the existing Cloudflare tunnel.
+# Review /etc/caddy/Caddyfile before replacing it: preserve any custom rules.
+:80 {
+    @frontendPage {
+        header Accept *text/html*
+        not path /docs /redoc /openapi.json
+    }
+
+    # Bundled JS and CSS must be served from the Vite build directory.
+    handle /assets/* {
+        root * /var/www/get-connected
+        file_server
+    }
+
+    handle /favicon.svg {
+        root * /var/www/get-connected
+        file_server
+    }
+
+    # F5 on /chats/9, /my-profile, etc. is a document navigation;
+    # serve React so its client router can read the URL.
+    handle @frontendPage {
+        root * /var/www/get-connected
+        try_files {path} /index.html
+        file_server
+    }
+
+    # JSON API calls and websocket upgrades still go to FastAPI.
+    handle {
+        reverse_proxy 127.0.0.1:8000
+    }
+}

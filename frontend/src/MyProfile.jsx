@@ -549,6 +549,7 @@ function MyProfile({
     event
   ) {
     event.preventDefault();
+    event.stopPropagation();
 
     if (
       !songTitle.trim() ||
@@ -575,10 +576,9 @@ function MyProfile({
         songArtist.trim()
       );
 
+      await loadProfile();
       setSongTitle("");
       setSongArtist("");
-
-      await loadProfile();
 
       setMessage(
         "Song added to your profile!"
@@ -938,12 +938,7 @@ function MyProfile({
               )}
             </div>
 
-            <form
-              className="add-song-form"
-              onSubmit={
-                handleAddSong
-              }
-            >
+            <div className="add-song-form">
               <input
                 type="text"
                 maxLength="150"
@@ -969,7 +964,8 @@ function MyProfile({
               />
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleAddSong}
                 disabled={
                   addingSong ||
                   !songTitle.trim() ||
@@ -980,7 +976,7 @@ function MyProfile({
                   ? "Adding..."
                   : "+ Add Song"}
               </button>
-            </form>
+            </div>
 
             <p className="song-help">
               Up to 10 songs.
