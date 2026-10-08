@@ -45,13 +45,19 @@ function App() {
   const [password, setPassword] =
     useState("");
 
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
+
   const [fullName, setFullName] =
     useState("");
 
   const [major, setMajor] =
     useState("");
 
-  const [verificationReply, setVerificationReply] = useState("");
+  const [verificationReply, setVerificationReply] =
+    useState("");
 
   const [message, setMessage] =
     useState("");
@@ -613,17 +619,23 @@ function App() {
   ) {
     event.preventDefault();
 
+    if (password !== confirmPassword) {
+      setMessage(
+        "Passwords do not match. Please try again."
+      );
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
     try {
-      const data =
-        await registerUser(
-          username,
-          password,
-          fullName,
-          major
-        );
+      await registerUser(
+        username,
+        password,
+        fullName,
+        major
+      );
 
       setMessage(
         "Account created! Student verification is done manually. " +
@@ -637,6 +649,7 @@ function App() {
       setMode("login");
 
       setPassword("");
+      setConfirmPassword("");
       setFullName("");
       setMajor("");
     } catch (error) {
@@ -649,22 +662,44 @@ function App() {
   }
 
 
-  async function submitVerificationReply(event) {
+  async function submitVerificationReply(
+    event
+  ) {
     event.preventDefault();
-    if (!verificationReply.trim()) return;
+
+    if (!verificationReply.trim()) {
+      return;
+    }
+
     setLoading(true);
     setMessage("");
+
     try {
-      await replyToVerification(authToken, verificationReply.trim());
+      await replyToVerification(
+        authToken,
+        verificationReply.trim()
+      );
+
       setVerificationReply("");
-      setCurrentUser(await getCurrentUser(authToken));
-      setMessage("Your response has been sent to the admin for review.");
+
+      setCurrentUser(
+        await getCurrentUser(
+          authToken
+        )
+      );
+
+      setMessage(
+        "Your response has been sent to the admin for review."
+      );
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message
+      );
     } finally {
       setLoading(false);
     }
   }
+
 
   async function refreshVerificationStatus() {
     if (!authToken) {
@@ -816,6 +851,7 @@ function App() {
 
     setUsername("");
     setPassword("");
+    setConfirmPassword("");
     setFullName("");
     setMajor("");
 
@@ -1026,25 +1062,69 @@ function App() {
               More Information Needed
             </div>
 
-            <p><strong>Message from the admin:</strong></p>
-            <p>{currentUser.verification_admin_note || "Please provide the additional details requested by the admin."}</p>
-            <form onSubmit={submitVerificationReply} style={{ width: "100%" }}>
-              <label htmlFor="verification-reply">Your response</label>
+            <p>
+              <strong>
+                Message from the admin:
+              </strong>
+            </p>
+
+            <p>
+              {
+                currentUser.verification_admin_note ||
+                "Please provide the additional details requested by the admin."
+              }
+            </p>
+
+            <form
+              onSubmit={
+                submitVerificationReply
+              }
+              style={{
+                width: "100%",
+              }}
+            >
+              <label htmlFor="verification-reply">
+                Your response
+              </label>
+
               <textarea
                 id="verification-reply"
                 rows={5}
                 maxLength={2000}
                 required
                 value={verificationReply}
-                onChange={(event) => setVerificationReply(event.target.value)}
+                onChange={(event) =>
+                  setVerificationReply(
+                    event.target.value
+                  )
+                }
                 placeholder="Explain or correct your student information here. Never share passwords or Duo codes."
-                style={{ width: "100%", margin: "12px 0", padding: "10px" }}
+                style={{
+                  width: "100%",
+                  margin: "12px 0",
+                  padding: "10px",
+                }}
               />
-              <button className="main-button" type="submit" disabled={loading || !verificationReply.trim()}>
-                {loading ? "Submitting..." : "Send Information"}
+
+              <button
+                className="main-button"
+                type="submit"
+                disabled={
+                  loading ||
+                  !verificationReply.trim()
+                }
+              >
+                {loading
+                  ? "Submitting..."
+                  : "Send Information"}
               </button>
             </form>
-            {message && <p role="status">{message}</p>}
+
+            {message && (
+              <p role="status">
+                {message}
+              </p>
+            )}
 
             <button
               className="main-button"
@@ -1367,6 +1447,21 @@ function App() {
                 value={password}
                 onChange={(event) =>
                   setPassword(
+                    event.target.value
+                  )
+                }
+                required
+              />
+            </label>
+
+            <label>
+              Type password again
+
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) =>
+                  setConfirmPassword(
                     event.target.value
                   )
                 }

@@ -35,6 +35,7 @@ class AdminUserSummaryResponse(BaseModel):
     id: int
     username: str
     display_name: str | None
+    full_name: str | None
     major: str | None
     role: str
     verification_status: str

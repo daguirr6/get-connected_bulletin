@@ -96,6 +96,7 @@ function AdminCleanupPanel({ token }) {
             return [
               user.username,
               user.display_name || "",
+              user.full_name || "",
               user.major || "",
               user.account_status,
             ].some((value) =>
@@ -449,7 +450,7 @@ function AdminCleanupPanel({ token }) {
                 event.target.value
               )
             }
-            placeholder="Username, display name, major..."
+            placeholder="Username, legal name, display name, major..."
           />
         </label>
 
@@ -491,6 +492,13 @@ function AdminCleanupPanel({ token }) {
                         Username:
                       </strong>{" "}
                       {user.username}
+                    </p>
+
+                    <p>
+                      <strong>
+                        Legal name:
+                      </strong>{" "}
+                      {user.full_name || "Unknown"}
                     </p>
 
                     <p>

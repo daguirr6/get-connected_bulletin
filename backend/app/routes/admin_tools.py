@@ -199,6 +199,11 @@ def get_admin_users(
                     if post_it is not None
                     else None
                 ),
+                full_name=(
+                    verification.full_name
+                    if verification is not None
+                    else None
+                ),
                 major=(
                     verification.major
                     if verification is not None
