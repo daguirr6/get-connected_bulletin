@@ -6,6 +6,13 @@ from pydantic import BaseModel, Field
 from backend.app.schemas.profile import ProfileSongResponse
 
 
+class VerificationDuplicateMatch(BaseModel):
+    user_id: int
+    username: str
+    verification_status: str
+    account_status: str
+
+
 class PendingVerificationResponse(BaseModel):
     id: int
     user_id: int
@@ -14,6 +21,12 @@ class PendingVerificationResponse(BaseModel):
     status: str
     submitted_at: datetime
     student_response: str | None = None
+    possible_duplicate: bool = False
+    duplicate_matches: list[
+        VerificationDuplicateMatch
+    ] = Field(
+        default_factory=list,
+    )
 
 
 class VerificationUpdateRequest(BaseModel):

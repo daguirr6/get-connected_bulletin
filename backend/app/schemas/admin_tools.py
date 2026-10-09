@@ -1,7 +1,13 @@
-from datetime import datetime
+from datetime import (
+    date,
+    datetime,
+)
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+)
 
 
 class AdminPostItResponse(BaseModel):
@@ -79,3 +85,45 @@ class AdminAccountDeleteResponse(BaseModel):
     user_id: int
     username: str
     message: str
+
+
+class DailyUsagePoint(BaseModel):
+    day_name: str
+    date: date
+    this_week: int
+    last_week: int
+
+
+class TimeUsagePoint(BaseModel):
+    hour: int
+    label: str
+    count: int
+    percentage: float
+
+
+class AdminWeeklyAnalyticsResponse(
+    BaseModel
+):
+    this_week_start: date
+    this_week_end: date
+
+    last_week_start: date
+    last_week_end: date
+
+    this_week_unique_users: int
+    last_week_unique_users: int
+
+    weekly_change_percent: (
+        float | None
+    )
+
+    busiest_day: str | None
+    quietest_day: str | None
+
+    days: list[
+        DailyUsagePoint
+    ]
+
+    times: list[
+        TimeUsagePoint
+    ]

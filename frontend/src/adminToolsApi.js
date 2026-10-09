@@ -70,7 +70,6 @@ export function removeAdminPostIt(
     token,
     {
       method: "DELETE",
-
       body: JSON.stringify({
         reason,
       }),
@@ -89,6 +88,16 @@ export function getAdminUsers(
 }
 
 
+export function getWeeklyAnalytics(
+  token
+) {
+  return adminRequest(
+    "/admin/analytics/weekly",
+    token
+  );
+}
+
+
 export function setAdminUserStatus(
   token,
   userId,
@@ -100,11 +109,9 @@ export function setAdminUserStatus(
     token,
     {
       method: "PATCH",
-
       body: JSON.stringify({
         account_status:
           accountStatus,
-
         reason,
       }),
     }
@@ -123,11 +130,9 @@ export function deleteAdminUser(
     token,
     {
       method: "DELETE",
-
       body: JSON.stringify({
         confirm_username:
           confirmUsername,
-
         reason,
       }),
     }

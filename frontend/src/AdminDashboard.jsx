@@ -70,6 +70,136 @@ const publicSafetyOptions = [
 ];
 
 
+function DuplicateVerificationWarning({
+  request,
+}) {
+  if (
+    !request.possible_duplicate ||
+    !request.duplicate_matches ||
+    request.duplicate_matches.length === 0
+  ) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: "14px",
+        padding: "14px",
+        background: "#fff0f1",
+        border: "2px solid #a92d36",
+        borderRadius: "10px",
+        color: "#702128",
+      }}
+    >
+      <p
+        style={{
+          margin: "0 0 8px",
+          fontWeight: "900",
+          letterSpacing: "0.02em",
+        }}
+      >
+        ⚠ POSSIBLE DUPLICATE ACCOUNT
+      </p>
+
+      <p
+        style={{
+          margin: "0 0 10px",
+          lineHeight: "1.5",
+        }}
+      >
+        An older Get Connected account
+        has the same legal name and major.
+        Review the matching account before
+        approving this registration.
+      </p>
+
+      <div
+        style={{
+          display: "grid",
+          gap: "8px",
+        }}
+      >
+        {request.duplicate_matches.map(
+          (match) => (
+            <div
+              key={match.user_id}
+              style={{
+                padding: "10px 12px",
+                background: "white",
+                border:
+                  "1px solid #e0a4a9",
+                borderRadius: "8px",
+              }}
+            >
+              <p
+                style={{
+                  margin: "2px 0",
+                }}
+              >
+                <strong>
+                  Matching username:
+                </strong>{" "}
+                {match.username}
+              </p>
+
+              <p
+                style={{
+                  margin: "2px 0",
+                }}
+              >
+                <strong>
+                  User ID:
+                </strong>{" "}
+                #{match.user_id}
+              </p>
+
+              <p
+                style={{
+                  margin: "2px 0",
+                }}
+              >
+                <strong>
+                  Verification:
+                </strong>{" "}
+                {
+                  match.verification_status
+                }
+              </p>
+
+              <p
+                style={{
+                  margin: "2px 0",
+                }}
+              >
+                <strong>
+                  Account status:
+                </strong>{" "}
+                {match.account_status}
+              </p>
+            </div>
+          )
+        )}
+      </div>
+
+      <p
+        style={{
+          margin: "10px 0 0",
+          fontSize: "12px",
+          fontWeight: "700",
+        }}
+      >
+        This is only a warning. Matching
+        names can belong to different
+        students, so Get Connected does
+        not automatically reject the
+        account.
+      </p>
+    </div>
+  );
+}
+
+
 function AdminDashboard({
   token,
   username,
@@ -728,6 +858,20 @@ function AdminDashboard({
                 <article
                   className="verification-card"
                   key={request.id}
+                  style={
+                    request.possible_duplicate
+                      ? {
+                          border:
+                            "2px solid #a92d36",
+                          borderLeft:
+                            "7px solid #a92d36",
+                          background:
+                            "#fffafa",
+                          boxShadow:
+                            "0 0 0 3px rgba(169, 45, 54, 0.08)",
+                        }
+                      : undefined
+                  }
                 >
                   <div className="verification-info">
                     <h3>
@@ -744,8 +888,17 @@ function AdminDashboard({
                     </p>
 
                     {request.student_response && (
-                      <p><strong>Student's additional information:</strong> {request.student_response}</p>
+                      <p>
+                        <strong>
+                          Student&apos;s
+                          additional information:
+                        </strong>{" "}
+                        {
+                          request.student_response
+                        }
+                      </p>
                     )}
+
                     <p className="verification-id">
                       Student account ID:{" "}
                       {
@@ -759,6 +912,10 @@ function AdminDashboard({
                         request.submitted_at
                       ).toLocaleString()}
                     </p>
+
+                    <DuplicateVerificationWarning
+                      request={request}
+                    />
                   </div>
 
                   <div className="verification-actions">
@@ -1116,7 +1273,7 @@ function AdminDashboard({
                 setChangeNote("");
               }}
             >
-              ├ù
+              ×
             </button>
 
             <div className="admin-review-heading">
@@ -1205,7 +1362,8 @@ function AdminDashboard({
 
                   <p>
                     <strong>
-                      Where they're headed:
+                      Where they&apos;re
+                      headed:
                     </strong>{" "}
                     {
                       selectedProfile
@@ -1343,7 +1501,7 @@ function AdminDashboard({
                             <strong>
                               {song.title}
                             </strong>{" "}
-                            ΓÇö {song.artist}
+                            — {song.artist}
                           </li>
                         )
                       )}
@@ -1437,7 +1595,7 @@ function AdminDashboard({
                 closeReportReview
               }
             >
-              ├ù
+              ×
             </button>
 
             <div className="admin-review-heading safety-heading">
@@ -1674,7 +1832,7 @@ function AdminDashboard({
                 closeAppealReview
               }
             >
-              ├ù
+              ×
             </button>
 
             <div className="admin-review-heading appeal-heading">
@@ -1728,7 +1886,7 @@ function AdminDashboard({
 
             <section className="appeal-student-reason">
               <p className="small-title">
-                STUDENT'S APPEAL
+                STUDENT&apos;S APPEAL
               </p>
 
               <p>
