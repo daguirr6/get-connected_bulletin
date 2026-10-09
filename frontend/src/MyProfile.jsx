@@ -15,6 +15,8 @@ import {
   uploadProfilePicture,
 } from "./api";
 
+import InterestPicker from "./InterestPicker";
+
 import "./MyProfile.css";
 
 
@@ -179,9 +181,6 @@ function MyProfile({
   const [aboutMe, setAboutMe] =
     useState("");
 
-  const [interests, setInterests] =
-    useState("");
-
   const [
     favoriteQuote,
     setFavoriteQuote,
@@ -223,68 +222,69 @@ function MyProfile({
     useState("");
 
 
-  function applyProfile(data) {
-    setProfile(data);
+  const applyProfile =
+    useCallback(
+      (data) => {
+        setProfile(data);
 
-    if (!data) {
-      setAboutMe("");
-      setInterests("");
-      setFavoriteQuote("");
-      setClassYear("");
-      setAspiration("");
-      setLookingFor([]);
-      setAskMeAbout("");
-      setCurrentObsession("");
-      setBackgroundStyle("paper");
-      setFontStyle("arial");
+        if (!data) {
+          setAboutMe("");
+          setFavoriteQuote("");
+          setClassYear("");
+          setAspiration("");
+          setLookingFor([]);
+          setAskMeAbout("");
+          setCurrentObsession("");
+          setBackgroundStyle(
+            "paper"
+          );
+          setFontStyle("arial");
 
-      return;
-    }
+          return;
+        }
 
-    setAboutMe(
-      data.about_me || ""
+        setAboutMe(
+          data.about_me || ""
+        );
+
+        setFavoriteQuote(
+          data.favorite_quote || ""
+        );
+
+        setClassYear(
+          data.class_year || ""
+        );
+
+        setAspiration(
+          data.aspiration || ""
+        );
+
+        setLookingFor(
+          splitLookingFor(
+            data.looking_for
+          )
+        );
+
+        setAskMeAbout(
+          data.ask_me_about || ""
+        );
+
+        setCurrentObsession(
+          data.current_obsession || ""
+        );
+
+        setBackgroundStyle(
+          data.background_style ||
+            "paper"
+        );
+
+        setFontStyle(
+          data.font_style ||
+            "arial"
+        );
+      },
+      []
     );
-
-    setInterests(
-      data.interests || ""
-    );
-
-    setFavoriteQuote(
-      data.favorite_quote || ""
-    );
-
-    setClassYear(
-      data.class_year || ""
-    );
-
-    setAspiration(
-      data.aspiration || ""
-    );
-
-    setLookingFor(
-      splitLookingFor(
-        data.looking_for
-      )
-    );
-
-    setAskMeAbout(
-      data.ask_me_about || ""
-    );
-
-    setCurrentObsession(
-      data.current_obsession || ""
-    );
-
-    setBackgroundStyle(
-      data.background_style ||
-        "paper"
-    );
-
-    setFontStyle(
-      data.font_style ||
-        "arial"
-    );
-  }
 
 
   const loadProfile =
@@ -317,22 +317,72 @@ function MyProfile({
           setLoading(false);
         }
       },
-      [token]
+      [
+        token,
+        applyProfile,
+      ]
     );
 
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    let cancelled = false;
+
+
+    async function loadInitialProfile() {
+      try {
+        const [
+          profileData,
+          postData,
+        ] = await Promise.all([
+          getMyProfile(token),
+          getMyPostIt(token),
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        applyProfile(
+          profileData
+        );
+
+        setMyPostIt(
+          postData
+        );
+
+        setError("");
+      } catch (loadError) {
+        if (cancelled) {
+          return;
+        }
+
+        setError(
+          loadError.message
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+
+    loadInitialProfile();
+
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    token,
+    applyProfile,
+  ]);
 
 
   function buildProfileData() {
     return {
       about_me:
         aboutMe.trim() || null,
-
-      interests:
-        interests.trim() || null,
 
       favorite_quote:
         favoriteQuote.trim() ||
@@ -807,6 +857,7 @@ function MyProfile({
             <div className="connection-card-body">
               <p>
                 <strong>Name</strong>
+
                 <span>
                   {displayName}
                 </span>
@@ -814,13 +865,16 @@ function MyProfile({
 
               <p>
                 <strong>Major</strong>
+
                 <span>
                   {major}
                 </span>
               </p>
 
               <label>
-                <strong>Year</strong>
+                <strong>
+                  Year
+                </strong>
 
                 <select
                   value={classYear}
@@ -879,18 +933,8 @@ function MyProfile({
               {displayName}&apos;s Interests
             </h3>
 
-            <textarea
-              rows="8"
-              maxLength="2000"
-              value={interests}
-              onChange={(event) =>
-                setInterests(
-                  event.target.value
-                )
-              }
-              placeholder={
-                "Birds, gaming, movies, cooking, music, hiking..."
-              }
+            <InterestPicker
+              token={token}
             />
           </section>
 

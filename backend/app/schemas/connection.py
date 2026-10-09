@@ -29,3 +29,6 @@ class ConnectionSuggestionResponse(BaseModel):
 
     shared_interest_count: int
     shared_interests: list[str]
+
+    mutual_count: int
+    mutual_connections: list[str]

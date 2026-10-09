@@ -15,6 +15,81 @@ import {
 } from "./api";
 
 
+async function fetchConnectionPageData(
+  token
+) {
+  const [
+    connectionData,
+    chatData,
+    blockData,
+    presenceData,
+  ] = await Promise.all([
+    getConnections(token),
+    getChats(token),
+    getMyBlocks(token),
+    getMyPresence(token),
+  ]);
+
+  const blockedUserIds =
+    new Set(
+      blockData.map(
+        (block) =>
+          block.blocked_user_id
+      )
+    );
+
+  let suggestionData = [];
+  let suggestionMessage = "";
+
+  try {
+    suggestionData =
+      await getConnectionSuggestions(
+        token
+      );
+  } catch (error) {
+    if (
+      error.message !==
+      "Create a Post-it before viewing connection suggestions"
+    ) {
+      suggestionMessage =
+        error.message;
+    }
+  }
+
+  return {
+    connections:
+      connectionData.filter(
+        (connection) =>
+          !blockedUserIds.has(
+            connection.user_id
+          )
+      ),
+
+    chats:
+      chatData.filter(
+        (chat) =>
+          !blockedUserIds.has(
+            chat.user_id
+          )
+      ),
+
+    suggestions:
+      suggestionData.filter(
+        (suggestion) =>
+          !blockedUserIds.has(
+            suggestion.user_id
+          )
+      ),
+
+    presenceMode:
+      presenceData.mode ||
+      "online",
+
+    suggestionMessage,
+  };
+}
+
+
 function MyConnections({
   token,
   onViewProfile,
@@ -52,7 +127,6 @@ function MyConnections({
     setConnectingUserId,
   ] = useState(null);
 
-
   const [
     presenceMode,
     setPresenceMode,
@@ -67,83 +141,40 @@ function MyConnections({
   const loadConnections =
     useCallback(
       async (
-        showLoading = true
+        showLoading = false
       ) => {
-        if (showLoading) {
-          setLoading(true);
-          setMessage("");
-        }
-
         try {
-          const [
-            connectionData,
-            chatData,
-            blockData,
-            presenceData,
-          ] = await Promise.all([
-            getConnections(token),
-            getChats(token),
-            getMyBlocks(token),
-            getMyPresence(token),
-          ]);
-
-          setPresenceMode(
-            presenceData.mode ||
-              "online"
-          );
-
-          const blockedUserIds =
-            new Set(
-              blockData.map(
-                (block) =>
-                  block
-                    .blocked_user_id
-              )
+          const data =
+            await fetchConnectionPageData(
+              token
             );
 
           setConnections(
-            connectionData.filter(
-              (connection) =>
-                !blockedUserIds.has(
-                  connection.user_id
-                )
-            )
+            data.connections
           );
 
           setChats(
-            chatData.filter(
-              (chat) =>
-                !blockedUserIds.has(
-                  chat.user_id
-                )
-            )
+            data.chats
           );
 
-          try {
-            const suggestionData =
-              await getConnectionSuggestions(
-                token
-              );
+          setSuggestions(
+            data.suggestions
+          );
 
-            setSuggestions(
-              suggestionData.filter(
-                (suggestion) =>
-                  !blockedUserIds.has(
-                    suggestion.user_id
-                  )
-              )
+          setPresenceMode(
+            data.presenceMode
+          );
+
+          if (
+            data.suggestionMessage
+          ) {
+            setMessage(
+              data.suggestionMessage
             );
-          } catch (error) {
-            setSuggestions([]);
-
-            if (
-              error.message !==
-              "Create a Post-it before viewing connection suggestions"
-            ) {
-              setMessage(
-                error.message
-              );
-            }
+          } else if (
+            showLoading
+          ) {
+            setMessage("");
           }
         } catch (error) {
           setMessage(
@@ -160,8 +191,68 @@ function MyConnections({
 
 
   useEffect(() => {
-    loadConnections();
-  }, [loadConnections]);
+    let cancelled = false;
+
+
+    async function loadInitialConnections() {
+      try {
+        const data =
+          await fetchConnectionPageData(
+            token
+          );
+
+        if (cancelled) {
+          return;
+        }
+
+        setConnections(
+          data.connections
+        );
+
+        setChats(
+          data.chats
+        );
+
+        setSuggestions(
+          data.suggestions
+        );
+
+        setPresenceMode(
+          data.presenceMode
+        );
+
+        if (
+          data.suggestionMessage
+        ) {
+          setMessage(
+            data.suggestionMessage
+          );
+        } else {
+          setMessage("");
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setMessage(
+          error.message
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+
+    loadInitialConnections();
+
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
 
   useEffect(() => {
@@ -174,7 +265,9 @@ function MyConnections({
       );
 
     return () => {
-      window.clearInterval(timer);
+      window.clearInterval(
+        timer
+      );
     };
   }, [loadConnections]);
 
@@ -259,7 +352,9 @@ function MyConnections({
         `You and ${suggestion.display_name} are now connected!`
       );
 
-      await loadConnections();
+      await loadConnections(
+        false
+      );
     } catch (error) {
       setMessage(
         error.message
@@ -334,12 +429,18 @@ function MyConnections({
               alignItems: "center",
               gap: "8px",
               padding: "7px 10px",
-              border: "1px solid #d7cfaa",
-              borderRadius: "999px",
-              background: "#fffbea",
-              color: "#4e5b52",
-              fontSize: "12px",
-              fontWeight: 800,
+              border:
+                "1px solid #d7cfaa",
+              borderRadius:
+                "999px",
+              background:
+                "#fffbea",
+              color:
+                "#4e5b52",
+              fontSize:
+                "12px",
+              fontWeight:
+                800,
             }}
           >
             <span>
@@ -348,17 +449,25 @@ function MyConnections({
 
             <select
               value={presenceMode}
-              disabled={presenceSaving}
+              disabled={
+                presenceSaving
+              }
               onChange={
                 handlePresenceChange
               }
               style={{
-                border: "none",
-                background: "transparent",
-                color: "#006633",
-                fontWeight: 900,
-                cursor: "pointer",
-                outline: "none",
+                border:
+                  "none",
+                background:
+                  "transparent",
+                color:
+                  "#006633",
+                fontWeight:
+                  900,
+                cursor:
+                  "pointer",
+                outline:
+                  "none",
               }}
             >
               <option value="online">
@@ -408,9 +517,12 @@ function MyConnections({
         <div
           className="bulletin-message"
           style={{
-            background: "#f1efe6",
-            borderColor: "#d3cfbe",
-            color: "#626862",
+            background:
+              "#f1efe6",
+            borderColor:
+              "#d3cfbe",
+            color:
+              "#626862",
           }}
         >
           Appear Offline is on. Other
@@ -436,8 +548,10 @@ function MyConnections({
           <button
             className="refresh-button"
             type="button"
-            onClick={
-              loadConnections
+            onClick={() =>
+              loadConnections(
+                false
+              )
             }
           >
             Refresh
@@ -481,18 +595,26 @@ function MyConnections({
                     <div className="verification-info">
                       <div
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          marginBottom: "10px",
+                          display:
+                            "flex",
+                          alignItems:
+                            "center",
+                          gap:
+                            "12px",
+                          marginBottom:
+                            "10px",
                         }}
                       >
                         <div
                           style={{
-                            position: "relative",
-                            width: "48px",
-                            height: "48px",
-                            flex: "0 0 48px",
+                            position:
+                              "relative",
+                            width:
+                              "48px",
+                            height:
+                              "48px",
+                            flex:
+                              "0 0 48px",
                           }}
                         >
                           {chat?.profile_picture_url ? (
@@ -502,26 +624,41 @@ function MyConnections({
                               }
                               alt=""
                               style={{
-                                width: "48px",
-                                height: "48px",
-                                objectFit: "cover",
-                                borderRadius: "50%",
-                                border: "2px solid #fffbea",
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                                width:
+                                  "48px",
+                                height:
+                                  "48px",
+                                objectFit:
+                                  "cover",
+                                borderRadius:
+                                  "50%",
+                                border:
+                                  "2px solid #fffbea",
+                                boxShadow:
+                                  "0 2px 8px rgba(0,0,0,0.12)",
                               }}
                             />
                           ) : (
                             <div
                               style={{
-                                width: "48px",
-                                height: "48px",
-                                display: "grid",
-                                placeItems: "center",
-                                borderRadius: "50%",
-                                background: "#006633",
-                                color: "white",
-                                fontWeight: 900,
-                                fontSize: "20px",
+                                width:
+                                  "48px",
+                                height:
+                                  "48px",
+                                display:
+                                  "grid",
+                                placeItems:
+                                  "center",
+                                borderRadius:
+                                  "50%",
+                                background:
+                                  "#006633",
+                                color:
+                                  "white",
+                                fontWeight:
+                                  900,
+                                fontSize:
+                                  "20px",
                               }}
                             >
                               {connection.display_name
@@ -538,13 +675,20 @@ function MyConnections({
                               )
                             }
                             style={{
-                              position: "absolute",
-                              right: "0",
-                              bottom: "1px",
-                              width: "12px",
-                              height: "12px",
-                              borderRadius: "50%",
-                              border: "2px solid #fff",
+                              position:
+                                "absolute",
+                              right:
+                                "0",
+                              bottom:
+                                "1px",
+                              width:
+                                "12px",
+                              height:
+                                "12px",
+                              borderRadius:
+                                "50%",
+                              border:
+                                "2px solid #fff",
                               background:
                                 presenceColor(
                                   chat?.presence_status
@@ -567,9 +711,12 @@ function MyConnections({
 
                           <p
                             style={{
-                              margin: "2px 0 0",
-                              fontSize: "12px",
-                              fontWeight: 800,
+                              margin:
+                                "2px 0 0",
+                              fontSize:
+                                "12px",
+                              fontWeight:
+                                800,
                               color:
                                 presenceColor(
                                   chat?.presence_status
@@ -636,9 +783,11 @@ function MyConnections({
                         onClick={() =>
                           onOpenChat({
                             ...connection,
+
                             profile_picture_url:
                               chat?.profile_picture_url ||
                               null,
+
                             presence_status:
                               chat?.presence_status ||
                               "offline",
@@ -677,7 +826,8 @@ function MyConnections({
       <section
         className="admin-panel"
         style={{
-          marginTop: "24px",
+          marginTop:
+            "24px",
         }}
       >
         <div className="admin-panel-heading">
@@ -687,31 +837,46 @@ function MyConnections({
             </p>
 
             <h2>
-              Shared Interests
+              Connection Suggestions
             </h2>
+
+            <p
+              style={{
+                margin:
+                  "5px 0 0",
+                color:
+                  "#6d756f",
+                fontSize:
+                  "12px",
+              }}
+            >
+              Shared interests are
+              ranked first, then mutual
+              connections.
+            </p>
           </div>
         </div>
 
 
         {loading ? (
           <div className="empty-state">
-            Finding people with
-            similar interests...
+            Finding people you may
+            click with...
           </div>
         ) : suggestions.length ===
           0 ? (
           <div className="empty-state">
             <h3>
-              No interest matches yet
+              No suggestions yet
             </h3>
 
             <p>
-              Add a few interests to
-              your profile, separated
-              by commas. Students who
-              share at least one of
-              those interests can
-              appear here.
+              Add interests to your
+              profile or make more
+              connections. Students
+              who share your interests
+              or mutual connections
+              can appear here.
             </p>
           </div>
         ) : (
@@ -746,26 +911,112 @@ function MyConnections({
                       }
                     </p>
 
-                    <p>
-                      <strong>
-                        {suggestion
-                          .shared_interest_count}
-                      </strong>{" "}
-                      {suggestion
-                        .shared_interest_count ===
-                      1
-                        ? "shared interest"
-                        : "shared interests"}
-                    </p>
 
-                    <p className="submitted-date">
-                      <strong>
-                        Also likes:
-                      </strong>{" "}
-                      {suggestion
-                        .shared_interests
-                        .join(" • ")}
-                    </p>
+                    {suggestion
+                      .shared_interest_count >
+                      0 && (
+                      <div
+                        style={{
+                          marginTop:
+                            "12px",
+                          padding:
+                            "10px 12px",
+                          border:
+                            "1px solid #d7cfaa",
+                          borderLeft:
+                            "4px solid #006633",
+                          background:
+                            "#f5fbf7",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin:
+                              "0 0 5px",
+                          }}
+                        >
+                          <strong>
+                            {
+                              suggestion
+                                .shared_interest_count
+                            }{" "}
+                            {suggestion
+                              .shared_interest_count ===
+                            1
+                              ? "shared interest"
+                              : "shared interests"}
+                          </strong>
+                        </p>
+
+                        <p
+                          className="submitted-date"
+                          style={{
+                            margin:
+                              0,
+                          }}
+                        >
+                          {suggestion
+                            .shared_interests
+                            .join(
+                              " • "
+                            )}
+                        </p>
+                      </div>
+                    )}
+
+
+                    {suggestion
+                      .mutual_count >
+                      0 && (
+                      <div
+                        style={{
+                          marginTop:
+                            "10px",
+                          padding:
+                            "10px 12px",
+                          border:
+                            "1px solid #e0d5a5",
+                          borderLeft:
+                            "4px solid #f2c230",
+                          background:
+                            "#fffbea",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin:
+                              "0 0 5px",
+                          }}
+                        >
+                          <strong>
+                            {
+                              suggestion
+                                .mutual_count
+                            }{" "}
+                            {suggestion
+                              .mutual_count ===
+                            1
+                              ? "mutual connection"
+                              : "mutual connections"}
+                          </strong>
+                        </p>
+
+                        <p
+                          className="submitted-date"
+                          style={{
+                            margin:
+                              0,
+                          }}
+                        >
+                          {suggestion
+                            .mutual_connections
+                            .join(
+                              " • "
+                            )}
+                        </p>
+                      </div>
+                    )}
+
 
                     {moderationBadge(
                       suggestion

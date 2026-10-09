@@ -12,11 +12,18 @@ from fastapi import (
     status,
 )
 from PIL import Image, UnidentifiedImageError
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.blocking import users_are_blocked
 from backend.app.database import get_db
+from backend.app.interest_service import (
+    MAX_PROFILE_INTERESTS,
+    get_interest_catalog,
+    get_selected_interests,
+    sync_profile_interests,
+)
 from backend.app.moderation import get_public_moderation
 from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
@@ -38,6 +45,43 @@ router = APIRouter(
     prefix="/profiles",
     tags=["Profiles"],
 )
+
+
+class InterestResponse(BaseModel):
+    id: int
+    name: str
+    slug: str
+    category: str
+    is_community_created: bool
+
+
+class ProfileInterestSelectionUpdate(BaseModel):
+    selected_interest_ids: list[int] = Field(
+        default_factory=list,
+        max_length=MAX_PROFILE_INTERESTS,
+    )
+
+    new_interests: list[str] = Field(
+        default_factory=list,
+        max_length=MAX_PROFILE_INTERESTS,
+    )
+
+
+class ProfileInterestSelectionResponse(BaseModel):
+    selected_interests: list[InterestResponse]
+
+
+def make_interest_response(
+    interest,
+) -> InterestResponse:
+    return InterestResponse(
+        id=interest.id,
+        name=interest.name,
+        slug=interest.slug,
+        category=interest.category,
+        is_community_created=
+            interest.is_community_created,
+    )
 
 
 PROFILE_PICTURE_DIR = (
@@ -113,6 +157,120 @@ def make_profile_response(
         updated_at=profile.updated_at,
         submitted_at=profile.submitted_at,
         reviewed_at=profile.reviewed_at,
+    )
+
+
+@router.get(
+    "/interests/catalog",
+    response_model=list[InterestResponse],
+)
+def get_profile_interest_catalog(
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    interests = get_interest_catalog(
+        db
+    )
+
+    return [
+        make_interest_response(interest)
+        for interest in interests
+    ]
+
+
+@router.get(
+    "/me/interests",
+    response_model=ProfileInterestSelectionResponse,
+)
+def get_my_profile_interests(
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if profile is None:
+        return ProfileInterestSelectionResponse(
+            selected_interests=[]
+        )
+
+    selected = get_selected_interests(
+        db,
+        profile.id,
+    )
+
+    return ProfileInterestSelectionResponse(
+        selected_interests=[
+            make_interest_response(interest)
+            for interest in selected
+        ]
+    )
+
+
+@router.put(
+    "/me/interests",
+    response_model=ProfileInterestSelectionResponse,
+)
+def update_my_profile_interests(
+    data: ProfileInterestSelectionUpdate,
+    user: User = Depends(require_verified_user),
+    db: Session = Depends(get_db),
+):
+    profile = db.scalar(
+        select(Profile).where(
+            Profile.user_id == user.id
+        )
+    )
+
+    if profile is None:
+        profile = Profile(
+            user_id=user.id,
+            status="draft",
+        )
+
+        db.add(profile)
+        db.flush()
+
+    before_ids = {
+        interest.id
+        for interest in get_selected_interests(
+            db,
+            profile.id,
+        )
+    }
+
+    selected = sync_profile_interests(
+        db,
+        profile,
+        user,
+        data.selected_interest_ids,
+        data.new_interests,
+    )
+
+    after_ids = {
+        interest.id
+        for interest in selected
+    }
+
+    if (
+        before_ids != after_ids
+        and profile.status != "draft"
+    ):
+        profile.status = "draft"
+        profile.submitted_at = None
+        profile.reviewed_at = None
+        profile.admin_note = None
+
+    db.commit()
+
+    return ProfileInterestSelectionResponse(
+        selected_interests=[
+            make_interest_response(interest)
+            for interest in selected
+        ]
     )
 
 

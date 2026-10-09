@@ -1,4 +1,3 @@
-import random
 import re
 
 from fastapi import (
@@ -16,8 +15,12 @@ from backend.app.moderation import (
     get_public_moderation,
 )
 from backend.app.models.connection import Connection
+from backend.app.models.interest import Interest
 from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
+from backend.app.models.profile_interest import (
+    ProfileInterest,
+)
 from backend.app.models.user import User
 from backend.app.models.verification import (
     VerificationRequest,
@@ -37,7 +40,7 @@ router = APIRouter(
 )
 
 
-def parse_interests(
+def parse_legacy_interests(
     value: str | None,
 ) -> dict[str, str]:
     if not value:
@@ -71,6 +74,179 @@ def parse_interests(
             ] = display_value
 
     return interests
+
+
+def get_profile_interests(
+    db: Session,
+    profile: Profile,
+) -> dict[str, str]:
+    structured = db.scalars(
+        select(Interest)
+        .join(
+            ProfileInterest,
+            ProfileInterest.interest_id
+            == Interest.id,
+        )
+        .where(
+            ProfileInterest.profile_id
+            == profile.id,
+            Interest.is_active.is_(True),
+        )
+        .order_by(
+            Interest.sort_order,
+            Interest.name,
+        )
+    ).all()
+
+    if structured:
+        return {
+            interest.normalized_name:
+                interest.name
+            for interest in structured
+        }
+
+    return parse_legacy_interests(
+        profile.interests
+    )
+
+
+def get_direct_connection_ids(
+    db: Session,
+    user_id: int,
+) -> set[int]:
+    connections = db.scalars(
+        select(Connection).where(
+            or_(
+                Connection.user_one_id
+                == user_id,
+
+                Connection.user_two_id
+                == user_id,
+            )
+        )
+    ).all()
+
+    direct_ids = set()
+
+    for connection in connections:
+        if (
+            connection.user_one_id
+            == user_id
+        ):
+            direct_ids.add(
+                connection.user_two_id
+            )
+        else:
+            direct_ids.add(
+                connection.user_one_id
+            )
+
+    return direct_ids
+
+
+def build_mutual_map(
+    db: Session,
+    user_id: int,
+    direct_ids: set[int],
+) -> dict[int, set[int]]:
+    mutual_map = {}
+
+    for direct_id in direct_ids:
+        if users_are_blocked(
+            db,
+            user_id,
+            direct_id,
+        ):
+            continue
+
+        connections = db.scalars(
+            select(Connection).where(
+                or_(
+                    Connection.user_one_id
+                    == direct_id,
+
+                    Connection.user_two_id
+                    == direct_id,
+                )
+            )
+        ).all()
+
+        for connection in connections:
+            if (
+                connection.user_one_id
+                == direct_id
+            ):
+                candidate_id = (
+                    connection.user_two_id
+                )
+            else:
+                candidate_id = (
+                    connection.user_one_id
+                )
+
+            if candidate_id == user_id:
+                continue
+
+            if candidate_id in direct_ids:
+                continue
+
+            mutual_map.setdefault(
+                candidate_id,
+                set(),
+            ).add(
+                direct_id
+            )
+
+    return mutual_map
+
+
+def get_mutual_names(
+    db: Session,
+    user_id: int,
+    mutual_ids: set[int],
+) -> list[str]:
+    names = []
+
+    for mutual_id in mutual_ids:
+        if users_are_blocked(
+            db,
+            user_id,
+            mutual_id,
+        ):
+            continue
+
+        mutual_user = db.get(
+            User,
+            mutual_id,
+        )
+
+        if (
+            mutual_user is None
+            or mutual_user.verification_status
+            != "verified"
+            or mutual_user.account_status
+            != "active"
+        ):
+            continue
+
+        post_it = db.scalar(
+            select(PostIt).where(
+                PostIt.user_id
+                == mutual_id
+            )
+        )
+
+        if post_it is None:
+            continue
+
+        names.append(
+            post_it.display_name
+        )
+
+    return sorted(
+        set(names),
+        key=str.casefold,
+    )
 
 
 @router.post(
@@ -405,55 +581,33 @@ def get_connection_suggestions(
         )
     )
 
-    if (
-        my_profile is None
-        or not my_profile.interests
-    ):
-        return []
-
-    my_interests = parse_interests(
-        my_profile.interests
-    )
-
-    if not my_interests:
-        return []
-
-    my_connections = db.scalars(
-        select(Connection).where(
-            or_(
-                Connection.user_one_id
-                == user.id,
-
-                Connection.user_two_id
-                == user.id,
+    if my_profile is not None:
+        my_interests = (
+            get_profile_interests(
+                db,
+                my_profile,
             )
         )
-    ).all()
+    else:
+        my_interests = {}
 
-    direct_ids = set()
+    direct_ids = (
+        get_direct_connection_ids(
+            db,
+            user.id,
+        )
+    )
 
-    for connection in my_connections:
-        if (
-            connection.user_one_id
-            == user.id
-        ):
-            direct_ids.add(
-                connection.user_two_id
-            )
-        else:
-            direct_ids.add(
-                connection.user_one_id
-            )
+    mutual_map = build_mutual_map(
+        db,
+        user.id,
+        direct_ids,
+    )
 
     candidate_profiles = db.scalars(
         select(Profile).where(
             Profile.user_id != user.id,
-
             Profile.status == "approved",
-
-            Profile.interests.is_not(
-                None
-            ),
         )
     ).all()
 
@@ -516,29 +670,42 @@ def get_connection_suggestions(
             continue
 
         candidate_interests = (
-            parse_interests(
-                candidate_profile.interests
+            get_profile_interests(
+                db,
+                candidate_profile,
             )
         )
 
         shared_keys = [
-            interest
-            for interest
-            in my_interests
-            if interest
+            key
+            for key in my_interests
+            if key
             in candidate_interests
         ]
 
-        if not shared_keys:
-            continue
-
         shared_interests = [
             candidate_interests[
-                interest
+                key
             ]
-            for interest
-            in shared_keys
+            for key in shared_keys
         ]
+
+        mutual_names = (
+            get_mutual_names(
+                db,
+                user.id,
+                mutual_map.get(
+                    candidate_id,
+                    set(),
+                ),
+            )
+        )
+
+        if (
+            not shared_interests
+            and not mutual_names
+        ):
+            continue
 
         suggestions.append(
             ConnectionSuggestionResponse(
@@ -560,6 +727,14 @@ def get_connection_suggestions(
                 shared_interests=
                     shared_interests,
 
+                mutual_count=
+                    len(
+                        mutual_names
+                    ),
+
+                mutual_connections=
+                    mutual_names,
+
                 moderation=
                     get_public_moderation(
                         db,
@@ -568,14 +743,20 @@ def get_connection_suggestions(
             )
         )
 
-    random.shuffle(
-        suggestions
-    )
-
     suggestions.sort(
-        key=lambda suggestion:
+        key=lambda suggestion: (
             -suggestion
-            .shared_interest_count
+            .shared_interest_count,
+
+            -suggestion
+            .mutual_count,
+
+            suggestion
+            .display_name
+            .casefold(),
+
+            suggestion.user_id,
+        )
     )
 
     return suggestions[:25]

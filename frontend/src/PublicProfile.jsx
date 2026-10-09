@@ -40,6 +40,41 @@ function splitLookingFor(
 }
 
 
+function splitInterests(
+  value
+) {
+  if (!value) {
+    return [];
+  }
+
+  const seen = new Set();
+
+  return value
+    .split(/[,;\n]+/)
+    .map(
+      (item) =>
+        item.trim()
+    )
+    .filter(Boolean)
+    .filter((item) => {
+      const normalized =
+        item.toLocaleLowerCase();
+
+      if (
+        seen.has(normalized)
+      ) {
+        return false;
+      }
+
+      seen.add(
+        normalized
+      );
+
+      return true;
+    });
+}
+
+
 function PublicProfile({
   token,
   userId,
@@ -61,10 +96,10 @@ function PublicProfile({
 
 
   useEffect(() => {
-    async function loadProfile() {
-      setLoading(true);
-      setError("");
+    let cancelled = false;
 
+
+    async function loadProfile() {
       try {
         const data =
           await getPublicProfile(
@@ -72,8 +107,17 @@ function PublicProfile({
             userId
           );
 
+        if (cancelled) {
+          return;
+        }
+
         setProfile(data);
+        setError("");
       } catch (loadError) {
+        if (cancelled) {
+          return;
+        }
+
         if (
           loadError.status === 404
         ) {
@@ -86,11 +130,19 @@ function PublicProfile({
           );
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
+
     loadProfile();
+
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     token,
     userId,
@@ -164,6 +216,11 @@ function PublicProfile({
   const lookingFor =
     splitLookingFor(
       profile.looking_for
+    );
+
+  const interests =
+    splitInterests(
+      profile.interests
     );
 
 
@@ -283,10 +340,20 @@ function PublicProfile({
             </h2>
 
             <div className="retro-box-body">
-              {profile.interests ? (
-                <p className="retro-text">
-                  {profile.interests}
-                </p>
+              {interests.length >
+              0 ? (
+                <div className="looking-tags">
+                  {interests.map(
+                    (interest) => (
+                      <span
+                        key={interest}
+                        className="looking-tag"
+                      >
+                        {interest}
+                      </span>
+                    )
+                  )}
+                </div>
               ) : (
                 <p className="retro-empty">
                   Nothing added yet.

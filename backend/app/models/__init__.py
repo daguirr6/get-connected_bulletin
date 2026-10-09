@@ -2,10 +2,12 @@ from backend.app.models.appeal import Appeal
 from backend.app.models.base import Base
 from backend.app.models.block import Block
 from backend.app.models.connection import Connection
+from backend.app.models.interest import Interest
 from backend.app.models.message import Message
 from backend.app.models.moderation_action import ModerationAction
 from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
+from backend.app.models.profile_interest import ProfileInterest
 from backend.app.models.profile_song import ProfileSong
 from backend.app.models.report import Report
 from backend.app.models.user import User
