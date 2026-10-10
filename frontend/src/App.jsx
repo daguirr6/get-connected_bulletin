@@ -46,7 +46,7 @@ function ChangelogDock({
       style={{
         position: "fixed",
         right: "22px",
-        bottom: "22px",
+        bottom: "86px",
         zIndex: 3500,
       }}
     >
