@@ -29,7 +29,9 @@ from backend.app.models.post_it import PostIt
 from backend.app.models.profile import Profile
 from backend.app.models.profile_song import ProfileSong
 from backend.app.models.user import User
-from backend.app.models.verification import VerificationRequest
+from backend.app.models.verification import (
+    VerificationRequest,
+)
 from backend.app.routes.auth import require_verified_user
 from backend.app.schemas.profile import (
     ProfileResponse,
@@ -131,6 +133,8 @@ def make_profile_response(
         user_id=profile.user_id,
         about_me=profile.about_me,
         interests=profile.interests,
+        identity_items=
+            profile.identity_items or [],
         favorite_quote=profile.favorite_quote,
         class_year=profile.class_year,
         aspiration=profile.aspiration,
@@ -389,6 +393,7 @@ def submit_my_profile(
         [
             profile.about_me,
             profile.interests,
+            profile.identity_items,
             profile.favorite_quote,
             profile.class_year,
             profile.aspiration,
@@ -805,6 +810,8 @@ def get_public_profile(
         major=verification.major,
         about_me=profile.about_me,
         interests=profile.interests,
+        identity_items=
+            profile.identity_items or [],
         favorite_quote=profile.favorite_quote,
         class_year=profile.class_year,
         aspiration=profile.aspiration,

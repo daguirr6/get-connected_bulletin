@@ -27,6 +27,9 @@ from backend.app.routes.auth import (
 from backend.app.routes.blocks import (
     router as block_router,
 )
+from backend.app.routes.changelog import (
+    router as changelog_router,
+)
 from backend.app.routes.chats import (
     router as chat_router,
 )
@@ -144,6 +147,10 @@ app.include_router(
 
 app.include_router(
     feedback_router
+)
+
+app.include_router(
+    changelog_router
 )
 
 

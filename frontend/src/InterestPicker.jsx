@@ -13,10 +13,12 @@ import {
 import "./InterestPicker.css";
 
 
-const MAX_INTERESTS = 12;
+const MAX_INTERESTS = 25;
 
 
-function normalizeName(value) {
+function normalizeName(
+  value
+) {
   return value
     .trim()
     .replace(/\s+/g, " ")
@@ -47,6 +49,11 @@ function InterestPicker({
 
   const [error, setError] =
     useState("");
+
+  const [
+    showBrowser,
+    setShowBrowser,
+  ] = useState(false);
 
 
   function updateLegacyText(
@@ -138,6 +145,48 @@ function InterestPicker({
   ]);
 
 
+  useEffect(() => {
+    if (!showBrowser) {
+      return undefined;
+    }
+
+
+    function handleKeyDown(
+      event
+    ) {
+      if (
+        event.key === "Escape"
+      ) {
+        setShowBrowser(false);
+        setSearch("");
+      }
+    }
+
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [showBrowser]);
+
+
   const selectedIds =
     useMemo(
       () =>
@@ -194,7 +243,7 @@ function InterestPicker({
             )
           );
         })
-        .slice(0, 12);
+        .slice(0, 20);
     }, [
       catalog,
       normalizedSearch,
@@ -474,6 +523,17 @@ function InterestPicker({
   }
 
 
+  function closeBrowser() {
+    if (saving) {
+      return;
+    }
+
+    setShowBrowser(false);
+    setSearch("");
+    setError("");
+  }
+
+
   if (loading) {
     return (
       <div className="interest-picker-loading">
@@ -492,8 +552,11 @@ function InterestPicker({
           </strong>
 
           <p>
-            Choose up to 12 things
+            Choose up to 25 things
             you&apos;re genuinely into.
+            These are used to help
+            find people you may click
+            with.
           </p>
         </div>
 
@@ -554,227 +617,411 @@ function InterestPicker({
       )}
 
 
-      <div className="interest-search-area">
-        <label
-          htmlFor="interest-search"
-        >
-          Search or add an interest
-        </label>
-
-        <input
-          id="interest-search"
-          type="text"
-          maxLength="50"
-          autoComplete="off"
-          value={search}
-          disabled={saving}
-          placeholder={
-            atLimit
-              ? "Remove an interest to add another"
-              : "Try gaming, cooking, paragliding..."
-          }
-          onChange={(event) =>
-            setSearch(
-              event.target.value
-            )
-          }
-          onKeyDown={
-            handleSearchKeyDown
-          }
-        />
-
-        <p className="interest-search-help">
-          Search the community
-          catalog first. If your
-          interest isn&apos;t there,
-          you can add it for everyone.
-        </p>
-      </div>
-
-
-      {error && (
+      {error && !showBrowser && (
         <div className="interest-picker-error">
           {error}
         </div>
       )}
 
 
-      {saving && (
+      {saving && !showBrowser && (
         <div className="interest-picker-saving">
           Saving interests...
         </div>
       )}
 
 
-      {normalizedSearch && (
-        <div className="interest-search-results">
-          {searchResults.length >
-          0 && (
-            <>
-              <p className="interest-result-label">
-                Matches
-              </p>
+      <button
+        type="button"
+        className="open-interest-browser"
+        onClick={() => {
+          setError("");
+          setShowBrowser(true);
+        }}
+      >
+        + Add Interests...
+      </button>
 
-              <div className="interest-result-list">
-                {searchResults.map(
-                  (interest) => (
-                    <button
-                      type="button"
-                      key={
-                        interest.id
-                      }
-                      className="interest-result-button"
-                      disabled={
-                        saving ||
-                        atLimit
-                      }
-                      onClick={() =>
-                        addExistingInterest(
-                          interest
-                        )
-                      }
-                    >
-                      <span>
-                        {
-                          interest.name
-                        }
-                      </span>
 
-                      <small>
-                        {
-                          interest.category
-                        }
-                      </small>
-                    </button>
-                  )
-                )}
+      <p className="interest-picker-note">
+        Can&apos;t find something?
+        Add it yourself. New interests
+        are saved to the community
+        catalog so other students can
+        select them later too.
+      </p>
+
+
+      {showBrowser && (
+        <div
+          className="interest-modal-backdrop"
+          role="presentation"
+          onMouseDown={
+            closeBrowser
+          }
+        >
+          <section
+            className="interest-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={
+              "interest-modal-title"
+            }
+            onMouseDown={(
+              event
+            ) =>
+              event.stopPropagation()
+            }
+          >
+            <header className="interest-modal-header">
+              <div>
+                <p className="interest-modal-eyebrow">
+                  GET CONNECTED
+                </p>
+
+                <h2
+                  id="interest-modal-title"
+                >
+                  Add Interests
+                </h2>
+
+                <p>
+                  Find something already
+                  in the community
+                  catalog or add your
+                  own.
+                </p>
               </div>
-            </>
-          )}
 
-
-          {exactCatalogMatch &&
-            selectedIds.has(
-              exactCatalogMatch.id
-            ) && (
-            <p className="interest-already-selected">
-              {
-                exactCatalogMatch.name
-              }{" "}
-              is already selected.
-            </p>
-          )}
-
-
-          {canCreateNew && (
-            <button
-              type="button"
-              className="create-interest-button"
-              disabled={saving}
-              onClick={
-                addNewInterest
-              }
-            >
-              + Add &quot;
-              {cleanedSearch}
-              &quot;
-            </button>
-          )}
-
-
-          {!exactCatalogMatch &&
-            !canCreateNew &&
-            !selectedNameMatch &&
-            cleanedSearch.length >
-              0 &&
-            cleanedSearch.length <
-              2 && (
-            <p className="interest-search-message">
-              Type at least
-              2 characters.
-            </p>
-          )}
-
-
-          {atLimit && (
-            <p className="interest-limit-message">
-              You&apos;ve reached
-              the 12-interest limit.
-              Remove one before
-              adding another.
-            </p>
-          )}
-        </div>
-      )}
-
-
-      {!normalizedSearch && (
-        <div className="interest-browser">
-          <div className="interest-browser-heading">
-            <strong>
-              Browse Interests
-            </strong>
-
-            <span>
-              {catalog.length} in
-              the community catalog
-            </span>
-          </div>
-
-          {groupedCatalog.map(
-            ([
-              category,
-              interests,
-            ]) => (
-              <section
-                className="interest-category"
-                key={category}
+              <button
+                type="button"
+                className="interest-modal-close"
+                aria-label={
+                  "Close interest browser"
+                }
+                disabled={saving}
+                onClick={
+                  closeBrowser
+                }
               >
-                <h4>
-                  {category}
-                </h4>
+                ×
+              </button>
+            </header>
 
-                <div className="interest-category-chips">
-                  {interests.map(
-                    (interest) => (
+
+            <div className="interest-modal-summary">
+              <strong>
+                {
+                  selectedInterests.length
+                }
+                {" / "}
+                {MAX_INTERESTS}
+              </strong>
+
+              <span>
+                interests selected
+              </span>
+            </div>
+
+
+            <div className="interest-search-area">
+              <label
+                htmlFor="interest-search"
+              >
+                Search interests
+              </label>
+
+              <input
+                id="interest-search"
+                type="text"
+                maxLength="50"
+                autoComplete="off"
+                autoFocus
+                value={search}
+                disabled={saving}
+                placeholder={
+                  atLimit
+                    ? "Remove an interest to add another"
+                    : "Try Destiny 2, architecture, hiking..."
+                }
+                onChange={(
+                  event
+                ) =>
+                  setSearch(
+                    event.target.value
+                  )
+                }
+                onKeyDown={
+                  handleSearchKeyDown
+                }
+              />
+
+              <p className="interest-search-help">
+                If there&apos;s no exact
+                match, you can create a
+                new interest. New ones
+                are permanently saved
+                for the community and
+                placed into one of the
+                broad interest
+                categories.
+              </p>
+            </div>
+
+
+            {error && (
+              <div className="interest-picker-error">
+                {error}
+              </div>
+            )}
+
+
+            {saving && (
+              <div className="interest-picker-saving">
+                Saving interests...
+              </div>
+            )}
+
+
+            <div className="interest-modal-content">
+              {normalizedSearch ? (
+                <div className="interest-search-results">
+                  {searchResults.length >
+                  0 && (
+                    <>
+                      <p className="interest-result-label">
+                        Matches
+                      </p>
+
+                      <div className="interest-result-list">
+                        {searchResults.map(
+                          (
+                            interest
+                          ) => (
+                            <button
+                              type="button"
+                              key={
+                                interest.id
+                              }
+                              className="interest-result-button"
+                              disabled={
+                                saving ||
+                                atLimit
+                              }
+                              onClick={() =>
+                                addExistingInterest(
+                                  interest
+                                )
+                              }
+                            >
+                              <span>
+                                {
+                                  interest.name
+                                }
+                              </span>
+
+                              <small>
+                                {
+                                  interest.category
+                                }
+                              </small>
+                            </button>
+                          )
+                        )}
+                      </div>
+                    </>
+                  )}
+
+
+                  {exactCatalogMatch &&
+                    selectedIds.has(
+                      exactCatalogMatch.id
+                    ) && (
+                    <p className="interest-already-selected">
+                      {
+                        exactCatalogMatch.name
+                      }{" "}
+                      is already selected.
+                    </p>
+                  )}
+
+
+                  {canCreateNew && (
+                    <div className="new-interest-card">
+                      <p>
+                        No exact match
+                        for:
+                      </p>
+
+                      <strong>
+                        {cleanedSearch}
+                      </strong>
+
                       <button
                         type="button"
-                        key={
-                          interest.id
-                        }
-                        className="available-interest-chip"
+                        className="create-interest-button"
                         disabled={
-                          saving ||
-                          atLimit
+                          saving
                         }
-                        onClick={() =>
-                          addExistingInterest(
-                            interest
-                          )
+                        onClick={
+                          addNewInterest
                         }
                       >
-                        +{" "}
-                        {
-                          interest.name
-                        }
+                        + Add &quot;
+                        {cleanedSearch}
+                        &quot;
                       </button>
-                    )
+
+                      <small>
+                        This becomes a
+                        reusable community
+                        interest for future
+                        students too.
+                      </small>
+                    </div>
+                  )}
+
+
+                  {!exactCatalogMatch &&
+                    !canCreateNew &&
+                    !selectedNameMatch &&
+                    cleanedSearch.length >
+                      0 &&
+                    cleanedSearch.length <
+                      2 && (
+                    <p className="interest-search-message">
+                      Type at least
+                      2 characters.
+                    </p>
+                  )}
+
+
+                  {atLimit && (
+                    <p className="interest-limit-message">
+                      You&apos;ve reached
+                      the 25-interest
+                      limit. Remove one
+                      before adding
+                      another.
+                    </p>
+                  )}
+
+
+                  {searchResults.length ===
+                    0 &&
+                    !canCreateNew &&
+                    !selectedNameMatch &&
+                    !atLimit &&
+                    cleanedSearch.length >=
+                      2 && (
+                    <p className="interest-search-message">
+                      No matches found.
+                    </p>
                   )}
                 </div>
-              </section>
-            )
-          )}
+              ) : (
+                <div className="interest-browser">
+                  <div className="interest-browser-heading">
+                    <div>
+                      <strong>
+                        Browse Interests
+                      </strong>
 
-          {availableCatalog.length ===
-            0 &&
-            selectedInterests.length >
-              0 && (
-            <p className="interest-picker-empty">
-              You&apos;ve selected
-              every currently available
-              interest.
-            </p>
-          )}
+                      <p>
+                        Pick anything
+                        that sounds like
+                        you.
+                      </p>
+                    </div>
+
+                    <span>
+                      {catalog.length} in
+                      the community
+                      catalog
+                    </span>
+                  </div>
+
+
+                  {groupedCatalog.map(
+                    ([
+                      category,
+                      interests,
+                    ]) => (
+                      <section
+                        className="interest-category"
+                        key={category}
+                      >
+                        <h4>
+                          {category}
+                        </h4>
+
+                        <div className="interest-category-chips">
+                          {interests.map(
+                            (
+                              interest
+                            ) => (
+                              <button
+                                type="button"
+                                key={
+                                  interest.id
+                                }
+                                className="available-interest-chip"
+                                disabled={
+                                  saving ||
+                                  atLimit
+                                }
+                                onClick={() =>
+                                  addExistingInterest(
+                                    interest
+                                  )
+                                }
+                              >
+                                +{" "}
+                                {
+                                  interest.name
+                                }
+                              </button>
+                            )
+                          )}
+                        </div>
+                      </section>
+                    )
+                  )}
+
+
+                  {availableCatalog.length ===
+                    0 &&
+                    selectedInterests.length >
+                      0 && (
+                    <p className="interest-picker-empty">
+                      You&apos;ve selected
+                      every currently
+                      available interest.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+
+            <footer className="interest-modal-footer">
+              <p>
+                New custom interests
+                stay saved for future
+                students.
+              </p>
+
+              <button
+                type="button"
+                disabled={saving}
+                onClick={
+                  closeBrowser
+                }
+              >
+                Done
+              </button>
+            </footer>
+          </section>
         </div>
       )}
     </div>

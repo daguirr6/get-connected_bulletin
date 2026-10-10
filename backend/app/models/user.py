@@ -3,19 +3,34 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String, false, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    String,
+    false,
+    func,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
 
 from backend.app.models.base import Base
 
+
 if TYPE_CHECKING:
-    from backend.app.models.verification import VerificationRequest
+    from backend.app.models.verification import (
+        VerificationRequest,
+    )
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
 
     username: Mapped[str] = mapped_column(
         String(50),
@@ -61,7 +76,16 @@ class User(Base):
         nullable=False,
     )
 
-    last_seen_at: Mapped[datetime | None] = mapped_column(
+    last_seen_at: Mapped[
+        datetime | None
+    ] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    last_seen_changelog_at: Mapped[
+        datetime | None
+    ] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )

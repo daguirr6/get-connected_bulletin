@@ -15,7 +15,11 @@ import {
   uploadProfilePicture,
 } from "./api";
 
-import InterestPicker from "./InterestPicker";
+import IdentityItemsEditor
+  from "./IdentityItemsEditor";
+
+import InterestPicker
+  from "./InterestPicker";
 
 import "./MyProfile.css";
 
@@ -182,6 +186,11 @@ function MyProfile({
     useState("");
 
   const [
+    identityItems,
+    setIdentityItems,
+  ] = useState([]);
+
+  const [
     favoriteQuote,
     setFavoriteQuote,
   ] = useState("");
@@ -229,6 +238,7 @@ function MyProfile({
 
         if (!data) {
           setAboutMe("");
+          setIdentityItems([]);
           setFavoriteQuote("");
           setClassYear("");
           setAspiration("");
@@ -245,6 +255,11 @@ function MyProfile({
 
         setAboutMe(
           data.about_me || ""
+        );
+
+        setIdentityItems(
+          data.identity_items ||
+          []
         );
 
         setFavoriteQuote(
@@ -383,6 +398,9 @@ function MyProfile({
     return {
       about_me:
         aboutMe.trim() || null,
+
+      identity_items:
+        identityItems,
 
       favorite_quote:
         favoriteQuote.trim() ||
@@ -856,7 +874,9 @@ function MyProfile({
 
             <div className="connection-card-body">
               <p>
-                <strong>Name</strong>
+                <strong>
+                  Name
+                </strong>
 
                 <span>
                   {displayName}
@@ -864,7 +884,9 @@ function MyProfile({
               </p>
 
               <p>
-                <strong>Major</strong>
+                <strong>
+                  Major
+                </strong>
 
                 <span>
                   {major}
@@ -932,6 +954,18 @@ function MyProfile({
             <h3>
               {displayName}&apos;s Interests
             </h3>
+
+            <IdentityItemsEditor
+              displayName={
+                displayName
+              }
+              items={
+                identityItems
+              }
+              onChange={
+                setIdentityItems
+              }
+            />
 
             <InterestPicker
               token={token}
@@ -1009,7 +1043,9 @@ function MyProfile({
 
               <button
                 type="button"
-                onClick={handleAddSong}
+                onClick={
+                  handleAddSong
+                }
                 disabled={
                   addingSong ||
                   !songTitle.trim() ||

@@ -172,6 +172,29 @@
 }
 
 
+.identity-box {
+  border:
+    2px solid #b99a21;
+
+  background:
+    rgba(255, 251, 234, 0.98);
+}
+
+
+.identity-box h2 {
+  background:
+    linear-gradient(
+      135deg,
+      #f2c230,
+      #f7d96b
+    );
+
+  color: #173326;
+
+  line-height: 1.35;
+}
+
+
 .gold-box {
   border:
     2px solid #f2c230;
@@ -259,6 +282,48 @@
   font-size: 12px;
 
   font-style: italic;
+}
+
+
+.identity-public-tags {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 7px;
+}
+
+
+.identity-public-tag {
+  padding:
+    7px 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff7c9,
+      #f5e9a2
+    );
+
+  color: #3d381c;
+
+  border:
+    1px solid #c9ad40;
+
+  border-radius: 999px;
+
+  font-size: 11px;
+  font-weight: 800;
+
+  overflow-wrap: anywhere;
+
+  box-shadow:
+    0 1px 2px
+    rgba(
+      64,
+      54,
+      13,
+      0.1
+    );
 }
 
 

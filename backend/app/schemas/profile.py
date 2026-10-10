@@ -1,9 +1,19 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+)
 
-from backend.app.schemas.moderation import PublicModerationNotice
+from backend.app.schemas.moderation import (
+    PublicModerationNotice,
+)
+
+
+MAX_IDENTITY_ITEMS = 10
+MAX_IDENTITY_ITEM_LENGTH = 60
 
 
 BackgroundStyle = Literal[
@@ -66,6 +76,11 @@ class ProfileUpdate(BaseModel):
         max_length=2000,
     )
 
+    identity_items: list[str] | None = Field(
+        default=None,
+        max_length=MAX_IDENTITY_ITEMS,
+    )
+
     favorite_quote: str | None = Field(
         default=None,
         max_length=500,
@@ -96,6 +111,57 @@ class ProfileUpdate(BaseModel):
     background_style: BackgroundStyle | None = None
     font_style: FontStyle | None = None
 
+    @field_validator(
+        "identity_items"
+    )
+    @classmethod
+    def validate_identity_items(
+        cls,
+        items: list[str] | None,
+    ) -> list[str] | None:
+        if items is None:
+            return None
+
+        cleaned_items = []
+        seen = set()
+
+        for item in items:
+            cleaned = " ".join(
+                item.strip().split()
+            )
+
+            if not cleaned:
+                raise ValueError(
+                    "Identity items cannot be blank"
+                )
+
+            if (
+                len(cleaned)
+                > MAX_IDENTITY_ITEM_LENGTH
+            ):
+                raise ValueError(
+                    "Identity items must be "
+                    f"{MAX_IDENTITY_ITEM_LENGTH} "
+                    "characters or shorter"
+                )
+
+            normalized = (
+                cleaned.casefold()
+            )
+
+            if normalized in seen:
+                raise ValueError(
+                    "Identity items cannot contain duplicates"
+                )
+
+            seen.add(normalized)
+
+            cleaned_items.append(
+                cleaned
+            )
+
+        return cleaned_items
+
 
 class ProfileResponse(BaseModel):
     id: int
@@ -103,6 +169,7 @@ class ProfileResponse(BaseModel):
 
     about_me: str | None
     interests: str | None
+    identity_items: list[str]
     favorite_quote: str | None
 
     class_year: str | None
@@ -135,6 +202,7 @@ class PublicProfileResponse(BaseModel):
 
     about_me: str | None
     interests: str | None
+    identity_items: list[str]
     favorite_quote: str | None
 
     class_year: str | None

@@ -223,6 +223,9 @@ function PublicProfile({
       profile.interests
     );
 
+  const identityItems =
+    profile.identity_items || [];
+
 
   return (
     <main
@@ -272,7 +275,9 @@ function PublicProfile({
               src={
                 profile.profile_picture_url
               }
-              alt={`${profile.display_name}'s profile`}
+              alt={
+                `${profile.display_name}'s profile`
+              }
             />
           ) : (
             <div className="retro-profile-photo retro-photo-placeholder">
@@ -333,6 +338,35 @@ function PublicProfile({
           </section>
 
 
+          <section className="retro-box identity-box">
+            <h2>
+              {profile.display_name} isn&apos;t{" "}
+              {profile.display_name} without...
+            </h2>
+
+            <div className="retro-box-body">
+              {identityItems.length > 0 ? (
+                <div className="identity-public-tags">
+                  {identityItems.map(
+                    (item) => (
+                      <span
+                        key={item}
+                        className="identity-public-tag"
+                      >
+                        {item}
+                      </span>
+                    )
+                  )}
+                </div>
+              ) : (
+                <p className="retro-empty">
+                  Nothing added yet.
+                </p>
+              )}
+            </div>
+          </section>
+
+
           <section className="retro-box green-box">
             <h2>
               {profile.display_name}&apos;s
@@ -340,8 +374,7 @@ function PublicProfile({
             </h2>
 
             <div className="retro-box-body">
-              {interests.length >
-              0 ? (
+              {interests.length > 0 ? (
                 <div className="looking-tags">
                   {interests.map(
                     (interest) => (
@@ -452,8 +485,7 @@ function PublicProfile({
             </h2>
 
             <div className="retro-box-body">
-              {lookingFor.length >
-              0 ? (
+              {lookingFor.length > 0 ? (
                 <div className="looking-tags">
                   {lookingFor.map(
                     (item) => (

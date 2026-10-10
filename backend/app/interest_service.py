@@ -13,8 +13,237 @@ from backend.app.models.profile_interest import ProfileInterest
 from backend.app.models.user import User
 
 
-MAX_PROFILE_INTERESTS = 12
-COMMUNITY_INTEREST_CATEGORY = "Community Added"
+MAX_PROFILE_INTERESTS = 25
+
+COMMUNITY_INTEREST_CATEGORY = (
+    "Community Added"
+)
+
+
+CURATED_INTEREST_CATEGORIES = (
+    "Campus",
+    "Creative",
+    "Entertainment",
+    "Fitness",
+    "Food",
+    "Games",
+    "Lifestyle",
+    "Music",
+    "Outdoors",
+    "Sports",
+    "Technology",
+    COMMUNITY_INTEREST_CATEGORY,
+)
+
+
+CATEGORY_KEYWORDS = {
+    "Games": (
+        "game",
+        "gaming",
+        "videogame",
+        "video game",
+        "rpg",
+        "dnd",
+        "d&d",
+        "tabletop",
+        "esport",
+        "destiny",
+        "dayz",
+        "baldur",
+        "minecraft",
+        "zelda",
+        "pokemon",
+        "overwatch",
+        "fortnite",
+        "valorant",
+        "league of legends",
+        "final fantasy",
+        "warhammer",
+    ),
+
+    "Music": (
+        "music",
+        "rock",
+        "metal",
+        "punk",
+        "pop",
+        "jazz",
+        "classical",
+        "hip hop",
+        "hip-hop",
+        "rap",
+        "r&b",
+        "indie",
+        "guitar",
+        "bass",
+        "piano",
+        "violin",
+        "drum",
+        "orchestra",
+        "concert",
+        "singing",
+        "songwriting",
+        "band",
+    ),
+
+    "Creative": (
+        "art",
+        "artist",
+        "drawing",
+        "painting",
+        "design",
+        "architecture",
+        "brutalist",
+        "photography",
+        "photo",
+        "filmmaking",
+        "film making",
+        "writing",
+        "writer",
+        "cosplay",
+        "3d printing",
+        "craft",
+        "crochet",
+        "knitting",
+        "sewing",
+        "embroidery",
+        "ceramic",
+        "pottery",
+        "animation",
+    ),
+
+    "Entertainment": (
+        "anime",
+        "manga",
+        "movie",
+        "movies",
+        "cinema",
+        "film",
+        "television",
+        "tv show",
+        "comic",
+        "book",
+        "reading",
+        "horror",
+        "sci-fi",
+        "science fiction",
+        "fantasy",
+        "true crime",
+        "podcast",
+    ),
+
+    "Technology": (
+        "coding",
+        "programming",
+        "software",
+        "computer",
+        "technology",
+        "tech",
+        "engineering",
+        "cybersecurity",
+        "cyber security",
+        "robot",
+        "robotics",
+        "machine learning",
+        "artificial intelligence",
+        " ai ",
+        "web development",
+        "game development",
+        "raspberry pi",
+        "arduino",
+        "electronics",
+    ),
+
+    "Outdoors": (
+        "birdwatch",
+        "bird watching",
+        "birding",
+        "hiking",
+        "camping",
+        "nature",
+        "outdoor",
+        "fishing",
+        "kayak",
+        "canoe",
+        "climbing",
+        "backpacking",
+        "foraging",
+        "gardening",
+        "wildlife",
+    ),
+
+    "Fitness": (
+        "fitness",
+        "gym",
+        "workout",
+        "working out",
+        "weightlifting",
+        "weight lifting",
+        "bodybuilding",
+        "running",
+        "cycling",
+        "yoga",
+        "pilates",
+    ),
+
+    "Sports": (
+        "basketball",
+        "soccer",
+        "football",
+        "baseball",
+        "volleyball",
+        "swimming",
+        "tennis",
+        "hockey",
+        "lacrosse",
+        "golf",
+        "rugby",
+        "boxing",
+        "wrestling",
+        "martial arts",
+    ),
+
+    "Food": (
+        "cooking",
+        "baking",
+        "food",
+        "coffee",
+        "tea",
+        "restaurant",
+        "cuisine",
+        "chef",
+        "barbecue",
+        "bbq",
+    ),
+
+    "Campus": (
+        "campus",
+        "student organization",
+        "student club",
+        "club",
+        "volunteering",
+        "volunteer",
+        "mason",
+        "gmu",
+        "university event",
+    ),
+
+    "Lifestyle": (
+        "travel",
+        "language",
+        "fashion",
+        "thrifting",
+        "cars",
+        "automotive",
+        "car enthusiast",
+        "history",
+        "museum",
+        "collecting",
+        "plants",
+        "pets",
+    ),
+}
+
 
 INTEREST_ALIASES = {
     "video games": "gaming",
@@ -56,46 +285,101 @@ INTEREST_ALIASES = {
 }
 
 
-def clean_interest_name(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value)
-    return " ".join(normalized.strip().split())
+def clean_interest_name(
+    value: str,
+) -> str:
+    normalized = unicodedata.normalize(
+        "NFKC",
+        value,
+    )
+
+    return " ".join(
+        normalized.strip().split()
+    )
 
 
-def normalize_interest_name(value: str) -> str:
-    return clean_interest_name(value).casefold()
+def normalize_interest_name(
+    value: str,
+) -> str:
+    return clean_interest_name(
+        value
+    ).casefold()
 
 
-def validate_new_interest_name(value: str) -> str:
-    cleaned = clean_interest_name(value)
+def validate_new_interest_name(
+    value: str,
+) -> str:
+    cleaned = clean_interest_name(
+        value
+    )
 
     if len(cleaned) < 2:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New interests must be at least 2 characters long",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "New interests must be "
+                "at least 2 characters long"
+            ),
         )
 
     if len(cleaned) > 50:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New interests must be 50 characters or shorter",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "New interests must be "
+                "50 characters or shorter"
+            ),
         )
 
-    if not any(character.isalnum() for character in cleaned):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New interests must contain at least one letter or number",
-        )
-
-    if any(
-        unicodedata.category(character).startswith("C")
+    if not any(
+        character.isalnum()
         for character in cleaned
     ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Interest contains invalid characters",
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "New interests must contain "
+                "at least one letter or number"
+            ),
+        )
+
+    if any(
+        unicodedata
+        .category(character)
+        .startswith("C")
+        for character in cleaned
+    ):
+        raise HTTPException(
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Interest contains "
+                "invalid characters"
+            ),
         )
 
     return cleaned
+
+
+def suggest_interest_category(
+    display_name: str,
+) -> str:
+    normalized = (
+        f" {normalize_interest_name(display_name)} "
+    )
+
+    for (
+        category,
+        keywords,
+    ) in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in normalized:
+                return category
+
+    return COMMUNITY_INTEREST_CATEGORY
 
 
 def make_community_interest_slug(
@@ -103,28 +387,46 @@ def make_community_interest_slug(
     normalized_name: str,
 ) -> str:
     ascii_name = (
-        unicodedata.normalize("NFKD", display_name)
-        .encode("ascii", "ignore")
+        unicodedata.normalize(
+            "NFKD",
+            display_name,
+        )
+        .encode(
+            "ascii",
+            "ignore",
+        )
         .decode("ascii")
         .lower()
     )
 
-    base = re.sub(r"[^a-z0-9]+", "-", ascii_name).strip("-")
+    base = re.sub(
+        r"[^a-z0-9]+",
+        "-",
+        ascii_name,
+    ).strip("-")
 
     if not base:
         base = "interest"
 
     digest = hashlib.sha1(
-        normalized_name.encode("utf-8")
+        normalized_name.encode(
+            "utf-8"
+        )
     ).hexdigest()[:8]
 
-    return f"{base[:60]}-{digest}"[:80]
+    return (
+        f"{base[:60]}-{digest}"
+    )[:80]
 
 
-def get_interest_catalog(db: Session) -> list[Interest]:
+def get_interest_catalog(
+    db: Session,
+) -> list[Interest]:
     return db.scalars(
         select(Interest)
-        .where(Interest.is_active.is_(True))
+        .where(
+            Interest.is_active.is_(True)
+        )
         .order_by(
             Interest.category,
             Interest.sort_order,
@@ -141,10 +443,12 @@ def get_selected_interests(
         select(Interest)
         .join(
             ProfileInterest,
-            ProfileInterest.interest_id == Interest.id,
+            ProfileInterest.interest_id
+            == Interest.id,
         )
         .where(
-            ProfileInterest.profile_id == profile_id,
+            ProfileInterest.profile_id
+            == profile_id,
             Interest.is_active.is_(True),
         )
         .order_by(
@@ -160,24 +464,42 @@ def get_or_create_interest(
     display_name: str,
     user_id: int,
 ) -> Interest:
-    cleaned = validate_new_interest_name(display_name)
-    normalized = normalize_interest_name(cleaned)
-    lookup_name = INTEREST_ALIASES.get(normalized, normalized)
+    cleaned = validate_new_interest_name(
+        display_name
+    )
+
+    normalized = normalize_interest_name(
+        cleaned
+    )
+
+    lookup_name = INTEREST_ALIASES.get(
+        normalized,
+        normalized,
+    )
 
     existing = db.scalar(
         select(Interest).where(
-            Interest.normalized_name == lookup_name
+            Interest.normalized_name
+            == lookup_name
         )
     )
 
     if existing is not None:
         if not existing.is_active:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="That interest is not currently available",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "That interest is not "
+                    "currently available"
+                ),
             )
 
         return existing
+
+    category = suggest_interest_category(
+        cleaned
+    )
 
     interest = Interest(
         name=cleaned,
@@ -186,7 +508,7 @@ def get_or_create_interest(
             cleaned,
             normalized,
         ),
-        category=COMMUNITY_INTEREST_CATEGORY,
+        category=category,
         sort_order=10000,
         is_active=True,
         is_community_created=True,
@@ -203,7 +525,8 @@ def get_or_create_interest(
     except IntegrityError:
         existing = db.scalar(
             select(Interest).where(
-                Interest.normalized_name == normalized
+                Interest.normalized_name
+                == normalized
             )
         )
 
@@ -212,8 +535,12 @@ def get_or_create_interest(
 
         if not existing.is_active:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="That interest is not currently available",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "That interest is not "
+                    "currently available"
+                ),
             )
 
         return existing
@@ -226,42 +553,67 @@ def sync_profile_interests(
     selected_interest_ids: list[int],
     new_interests: list[str],
 ) -> list[Interest]:
-    target_ids = list(dict.fromkeys(selected_interest_ids))
+    target_ids = list(
+        dict.fromkeys(
+            selected_interest_ids
+        )
+    )
 
     if target_ids:
         active_rows = db.scalars(
             select(Interest).where(
-                Interest.id.in_(target_ids),
-                Interest.is_active.is_(True),
+                Interest.id.in_(
+                    target_ids
+                ),
+                Interest.is_active.is_(
+                    True
+                ),
             )
         ).all()
 
         active_ids = {
             interest.id
-            for interest in active_rows
+            for interest
+            in active_rows
         }
 
         if any(
-            interest_id not in active_ids
-            for interest_id in target_ids
+            interest_id
+            not in active_ids
+            for interest_id
+            in target_ids
         ):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="One or more selected interests are unavailable",
+                status_code=
+                    status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "One or more selected "
+                    "interests are unavailable"
+                ),
             )
 
     cleaned_new_names = []
     seen_new_names = set()
 
     for raw_name in new_interests:
-        cleaned = validate_new_interest_name(raw_name)
-        normalized = normalize_interest_name(cleaned)
+        cleaned = validate_new_interest_name(
+            raw_name
+        )
+
+        normalized = normalize_interest_name(
+            cleaned
+        )
 
         if normalized in seen_new_names:
             continue
 
-        seen_new_names.add(normalized)
-        cleaned_new_names.append(cleaned)
+        seen_new_names.add(
+            normalized
+        )
+
+        cleaned_new_names.append(
+            cleaned
+        )
 
     for cleaned_name in cleaned_new_names:
         interest = get_or_create_interest(
@@ -271,20 +623,28 @@ def sync_profile_interests(
         )
 
         if interest.id not in target_ids:
-            target_ids.append(interest.id)
+            target_ids.append(
+                interest.id
+            )
 
-    if len(target_ids) > MAX_PROFILE_INTERESTS:
+    if (
+        len(target_ids)
+        > MAX_PROFILE_INTERESTS
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=
+                status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"Profiles can have up to "
-                f"{MAX_PROFILE_INTERESTS} interests"
+                "Profiles can have up to "
+                f"{MAX_PROFILE_INTERESTS} "
+                "interests"
             ),
         )
 
     current_links = db.scalars(
         select(ProfileInterest).where(
-            ProfileInterest.profile_id == profile.id
+            ProfileInterest.profile_id
+            == profile.id
         )
     ).all()
 
@@ -293,10 +653,15 @@ def sync_profile_interests(
         for link in current_links
     }
 
-    target_id_set = set(target_ids)
+    target_id_set = set(
+        target_ids
+    )
 
     for link in current_links:
-        if link.interest_id not in target_id_set:
+        if (
+            link.interest_id
+            not in target_id_set
+        ):
             db.delete(link)
 
     for interest_id in target_ids:
@@ -312,11 +677,14 @@ def sync_profile_interests(
 
     if not target_ids:
         profile.interests = None
+
         return []
 
     selected_rows = db.scalars(
         select(Interest).where(
-            Interest.id.in_(target_ids)
+            Interest.id.in_(
+                target_ids
+            )
         )
     ).all()
 
@@ -326,14 +694,18 @@ def sync_profile_interests(
     }
 
     ordered_interests = [
-        selected_by_id[interest_id]
+        selected_by_id[
+            interest_id
+        ]
         for interest_id in target_ids
-        if interest_id in selected_by_id
+        if interest_id
+        in selected_by_id
     ]
 
     profile.interests = ", ".join(
         interest.name
-        for interest in ordered_interests
+        for interest
+        in ordered_interests
     )
 
     return ordered_interests

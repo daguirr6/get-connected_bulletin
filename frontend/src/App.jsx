@@ -5,6 +5,7 @@ import {
 
 import AdminDashboard from "./AdminDashboard";
 import BulletinBoard from "./BulletinBoard";
+import ChangelogLauncher from "./ChangelogLauncher";
 import ChatPage from "./ChatPage";
 import LandingPage from "./LandingPage";
 import MyConnections from "./MyConnections";
@@ -26,6 +27,37 @@ import {
 import "./App.css";
 
 
+function ChangelogDock({
+  token,
+  currentUser,
+}) {
+  if (
+    !token ||
+    !currentUser ||
+    currentUser.role === "admin" ||
+    currentUser.verification_status !==
+      "verified"
+  ) {
+    return null;
+  }
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        right: "22px",
+        bottom: "22px",
+        zIndex: 3500,
+      }}
+    >
+      <ChangelogLauncher
+        token={token}
+      />
+    </div>
+  );
+}
+
+
 function App() {
   const [mode, setMode] =
     useState("login");
@@ -33,11 +65,13 @@ function App() {
   const [showAuth, setShowAuth] =
     useState(false);
 
-  const [showPrivacy, setShowPrivacy] =
-    useState(() =>
-      window.location.pathname ===
-      "/privacy"
-    );
+  const [
+    showPrivacy,
+    setShowPrivacy,
+  ] = useState(() =>
+    window.location.pathname ===
+    "/privacy"
+  );
 
   const [username, setUsername] =
     useState("");
@@ -56,14 +90,18 @@ function App() {
   const [major, setMajor] =
     useState("");
 
-  const [verificationReply, setVerificationReply] =
-    useState("");
+  const [
+    verificationReply,
+    setVerificationReply,
+  ] = useState("");
 
   const [message, setMessage] =
     useState("");
 
-  const [currentUser, setCurrentUser] =
-    useState(null);
+  const [
+    currentUser,
+    setCurrentUser,
+  ] = useState(null);
 
   const [loading, setLoading] =
     useState(false);
@@ -73,12 +111,14 @@ function App() {
     setRestoringSession,
   ] = useState(true);
 
-  const [authToken, setAuthToken] =
-    useState(() =>
-      sessionStorage.getItem(
-        "access_token"
-      )
-    );
+  const [
+    authToken,
+    setAuthToken,
+  ] = useState(() =>
+    sessionStorage.getItem(
+      "access_token"
+    )
+  );
 
   const [
     showCelebration,
@@ -102,7 +142,8 @@ function App() {
 
 
   function applyLocationState(
-    historyState = window.history.state
+    historyState =
+      window.history.state
   ) {
     const pathname =
       window.location.pathname;
@@ -110,71 +151,132 @@ function App() {
     setShowPrivacy(false);
     setShowAuth(false);
 
-    if (pathname === "/privacy") {
+    if (
+      pathname === "/privacy"
+    ) {
       setShowPrivacy(true);
+
       return;
     }
 
-    if (pathname === "/login") {
+    if (
+      pathname === "/login"
+    ) {
       setMode("login");
       setShowAuth(true);
+
       return;
     }
 
-    if (pathname === "/register") {
+    if (
+      pathname === "/register"
+    ) {
       setMode("register");
       setShowAuth(true);
+
       return;
     }
 
-    setSelectedProfileUserId(null);
-    setSelectedChat(null);
+    setSelectedProfileUserId(
+      null
+    );
 
-    if (pathname === "/connections") {
-      setStudentView("connections");
-      return;
-    }
+    setSelectedChat(
+      null
+    );
 
-    if (pathname === "/my-profile") {
-      setStudentView("my-profile");
-      return;
-    }
-
-    if (pathname === "/safety") {
-      setStudentView("safety-center");
-      return;
-    }
-
-    if (pathname.startsWith("/profiles/")) {
-      const userId = Number(
-        pathname.split("/")[2]
+    if (
+      pathname ===
+      "/connections"
+    ) {
+      setStudentView(
+        "connections"
       );
 
-      if (Number.isInteger(userId)) {
-        setSelectedProfileUserId(userId);
-        setStudentView("profile");
-        return;
-      }
-    }
-
-    if (pathname.startsWith("/chats/")) {
-      const savedChat =
-        historyState?.selectedChat;
-
-      if (savedChat) {
-        setSelectedChat(savedChat);
-        setStudentView("chat");
-        return;
-      }
-
-      // A direct refresh of a chat URL does
-      // not contain the connection object.
-      // Connections is the safest fallback.
-      setStudentView("connections");
       return;
     }
 
-    setStudentView("bulletin");
+    if (
+      pathname ===
+      "/my-profile"
+    ) {
+      setStudentView(
+        "my-profile"
+      );
+
+      return;
+    }
+
+    if (
+      pathname === "/safety"
+    ) {
+      setStudentView(
+        "safety-center"
+      );
+
+      return;
+    }
+
+    if (
+      pathname.startsWith(
+        "/profiles/"
+      )
+    ) {
+      const userId =
+        Number(
+          pathname.split(
+            "/"
+          )[2]
+        );
+
+      if (
+        Number.isInteger(
+          userId
+        )
+      ) {
+        setSelectedProfileUserId(
+          userId
+        );
+
+        setStudentView(
+          "profile"
+        );
+
+        return;
+      }
+    }
+
+    if (
+      pathname.startsWith(
+        "/chats/"
+      )
+    ) {
+      const savedChat =
+        historyState
+          ?.selectedChat;
+
+      if (savedChat) {
+        setSelectedChat(
+          savedChat
+        );
+
+        setStudentView(
+          "chat"
+        );
+
+        return;
+      }
+
+      setStudentView(
+        "connections"
+      );
+
+      return;
+    }
+
+    setStudentView(
+      "bulletin"
+    );
   }
 
 
@@ -188,7 +290,9 @@ function App() {
       path
     );
 
-    applyLocationState(state);
+    applyLocationState(
+      state
+    );
 
     window.scrollTo({
       top: 0,
@@ -207,24 +311,42 @@ function App() {
       );
     }
 
-    if (!window.history.state) {
+
+    if (
+      !window.history.state
+    ) {
       window.history.replaceState(
-        { view: "initial" },
+        {
+          view: "initial",
+        },
         "",
         window.location.pathname
       );
     }
 
-    applyLocationState(
-      window.history.state
-    );
+
+    const initialRouteTimer =
+      window.setTimeout(
+        () => {
+          applyLocationState(
+            window.history.state
+          );
+        },
+        0
+      );
+
 
     window.addEventListener(
       "popstate",
       handlePopState
     );
 
+
     return () => {
+      window.clearTimeout(
+        initialRouteTimer
+      );
+
       window.removeEventListener(
         "popstate",
         handlePopState
@@ -236,7 +358,9 @@ function App() {
   function openPrivacy() {
     pushRoute(
       "/privacy",
-      { view: "privacy" }
+      {
+        view: "privacy",
+      }
     );
   }
 
@@ -246,14 +370,15 @@ function App() {
   }
 
 
-
   useEffect(() => {
     let cancelled = false;
 
 
     async function restoreSession() {
       if (!authToken) {
-        setRestoringSession(false);
+        setRestoringSession(
+          false
+        );
 
         return;
       }
@@ -268,13 +393,17 @@ function App() {
           return;
         }
 
-        setCurrentUser(user);
+        setCurrentUser(
+          user
+        );
 
         const shouldCelebrate =
           user.role !== "admin" &&
-          user.verification_status ===
+          user
+            .verification_status ===
             "verified" &&
-          user.verification_welcome_seen ===
+          user
+            .verification_welcome_seen ===
             false;
 
         setShowCelebration(
@@ -289,11 +418,18 @@ function App() {
           "access_token"
         );
 
-        setAuthToken(null);
-        setCurrentUser(null);
+        setAuthToken(
+          null
+        );
+
+        setCurrentUser(
+          null
+        );
       } finally {
         if (!cancelled) {
-          setRestoringSession(false);
+          setRestoringSession(
+            false
+          );
         }
       }
     }
@@ -308,13 +444,14 @@ function App() {
   }, [authToken]);
 
 
-
   function openLoginPage() {
     setMessage("");
 
     pushRoute(
       "/login",
-      { view: "login" }
+      {
+        view: "login",
+      }
     );
   }
 
@@ -324,29 +461,28 @@ function App() {
 
     pushRoute(
       "/register",
-      { view: "register" }
+      {
+        view: "register",
+      }
     );
   }
 
 
   function closeAuthPage() {
     setMessage("");
+
     window.history.back();
   }
 
 
-
-  // Automatically check pending accounts
-  // about every 45 seconds.
-  //
-  // We also check when the student
-  // returns to this browser tab.
   useEffect(() => {
     if (
       !authToken ||
       !currentUser ||
-      currentUser.role === "admin" ||
-      currentUser.verification_status !==
+      currentUser.role ===
+        "admin" ||
+      currentUser
+        .verification_status !==
         "pending"
     ) {
       return;
@@ -376,24 +512,30 @@ function App() {
           return;
         }
 
-        setCurrentUser(user);
+        setCurrentUser(
+          user
+        );
 
 
         if (
-          user.verification_status ===
+          user
+            .verification_status ===
           "verified"
         ) {
           setMessage("");
 
           const shouldCelebrate =
-            user.verification_welcome_seen ===
-              false;
+            user
+              .verification_welcome_seen ===
+            false;
 
           setShowCelebration(
             shouldCelebrate
           );
 
-          if (!shouldCelebrate) {
+          if (
+            !shouldCelebrate
+          ) {
             setStudentView(
               "bulletin"
             );
@@ -402,7 +544,8 @@ function App() {
 
 
         if (
-          user.verification_status ===
+          user
+            .verification_status ===
           "needs_info"
         ) {
           setMessage(
@@ -411,9 +554,6 @@ function App() {
         }
       } catch {
         // Background checks stay quiet.
-        // The manual button will still
-        // show an error if something
-        // actually needs attention.
       } finally {
         checking = false;
       }
@@ -429,7 +569,8 @@ function App() {
 
     function handleVisibilityChange() {
       if (
-        document.visibilityState ===
+        document
+          .visibilityState ===
         "visible"
       ) {
         checkPendingVerification();
@@ -457,30 +598,25 @@ function App() {
     };
   }, [
     authToken,
-    currentUser?.id,
-    currentUser?.role,
-    currentUser?.verification_status,
-    currentUser?.verification_welcome_seen,
+    currentUser,
   ]);
 
 
-
-  // Keep presence fresh while a verified
-  // student is actively using the site.
-  // If heartbeats stop, the backend
-  // automatically treats them as offline.
   useEffect(() => {
     if (
       !authToken ||
       !currentUser ||
-      currentUser.role === "admin" ||
-      currentUser.verification_status !==
+      currentUser.role ===
+        "admin" ||
+      currentUser
+        .verification_status !==
         "verified"
     ) {
       return;
     }
 
     let cancelled = false;
+
 
     async function heartbeat() {
       if (
@@ -495,12 +631,14 @@ function App() {
           authToken
         );
       } catch {
-        // Presence should never interrupt
-        // the rest of the site.
+        // Presence should never
+        // interrupt the site.
       }
     }
 
+
     heartbeat();
+
 
     const timer =
       window.setInterval(
@@ -508,19 +646,23 @@ function App() {
         25000
       );
 
+
     function handleVisibilityChange() {
       if (
-        document.visibilityState ===
+        document
+          .visibilityState ===
         "visible"
       ) {
         heartbeat();
       }
     }
 
+
     document.addEventListener(
       "visibilitychange",
       handleVisibilityChange
     );
+
 
     return () => {
       cancelled = true;
@@ -536,11 +678,8 @@ function App() {
     };
   }, [
     authToken,
-    currentUser?.id,
-    currentUser?.role,
-    currentUser?.verification_status,
+    currentUser,
   ]);
-
 
 
   async function handleLogin(
@@ -572,12 +711,17 @@ function App() {
           loginData.access_token
         );
 
-      setCurrentUser(user);
+      setCurrentUser(
+        user
+      );
+
       setShowAuth(false);
       setShowPrivacy(false);
 
       window.history.replaceState(
-        { view: "bulletin" },
+        {
+          view: "bulletin",
+        },
         "",
         "/bulletin"
       );
@@ -596,9 +740,11 @@ function App() {
 
       const shouldCelebrate =
         user.role !== "admin" &&
-        user.verification_status ===
+        user
+          .verification_status ===
           "verified" &&
-        user.verification_welcome_seen ===
+        user
+          .verification_welcome_seen ===
           false;
 
       setShowCelebration(
@@ -619,15 +765,22 @@ function App() {
   ) {
     event.preventDefault();
 
-    if (password !== confirmPassword) {
+    setMessage("");
+
+
+    if (
+      password !==
+      confirmPassword
+    ) {
       setMessage(
-        "Passwords do not match. Please try again."
+        "Passwords do not match."
       );
+
       return;
     }
 
+
     setLoading(true);
-    setMessage("");
 
     try {
       await registerUser(
@@ -646,7 +799,9 @@ function App() {
         "No email address, Mason password, or Duo code is required."
       );
 
-      setMode("login");
+      setMode(
+        "login"
+      );
 
       setPassword("");
       setConfirmPassword("");
@@ -667,7 +822,9 @@ function App() {
   ) {
     event.preventDefault();
 
-    if (!verificationReply.trim()) {
+    if (
+      !verificationReply.trim()
+    ) {
       return;
     }
 
@@ -680,7 +837,9 @@ function App() {
         verificationReply.trim()
       );
 
-      setVerificationReply("");
+      setVerificationReply(
+        ""
+      );
 
       setCurrentUser(
         await getCurrentUser(
@@ -715,13 +874,17 @@ function App() {
           authToken
         );
 
-      setCurrentUser(user);
+      setCurrentUser(
+        user
+      );
 
       const shouldCelebrate =
         user.role !== "admin" &&
-        user.verification_status ===
+        user
+          .verification_status ===
           "verified" &&
-        user.verification_welcome_seen ===
+        user
+          .verification_welcome_seen ===
           false;
 
       setShowCelebration(
@@ -729,7 +892,8 @@ function App() {
       );
 
       if (
-        user.verification_status ===
+        user
+          .verification_status ===
         "pending"
       ) {
         setMessage(
@@ -740,7 +904,8 @@ function App() {
       }
 
       if (
-        user.verification_status ===
+        user
+          .verification_status ===
         "needs_info"
       ) {
         setMessage(
@@ -783,7 +948,9 @@ function App() {
       );
 
       window.history.replaceState(
-        { view: "bulletin" },
+        {
+          view: "bulletin",
+        },
         "",
         "/bulletin"
       );
@@ -806,6 +973,7 @@ function App() {
       `/profiles/${userId}`,
       {
         view: "profile",
+
         selectedProfileUserId:
           userId,
       }
@@ -820,6 +988,7 @@ function App() {
       `/chats/${connection.id}`,
       {
         view: "chat",
+
         selectedChat:
           connection,
       }
@@ -835,7 +1004,9 @@ function App() {
     setAuthToken(null);
     setCurrentUser(null);
 
-    setShowCelebration(false);
+    setShowCelebration(
+      false
+    );
 
     setStudentView(
       "bulletin"
@@ -860,14 +1031,18 @@ function App() {
     setShowAuth(false);
 
     window.history.replaceState(
-      { view: "landing" },
+      {
+        view: "landing",
+      },
       "",
       "/"
     );
   }
 
 
-  if (restoringSession) {
+  if (
+    restoringSession
+  ) {
     return (
       <main className="page">
         <section className="welcome-card">
@@ -880,7 +1055,8 @@ function App() {
           </h1>
 
           <p>
-            Getting your account ready.
+            Getting your account
+            ready.
           </p>
         </section>
       </main>
@@ -888,10 +1064,14 @@ function App() {
   }
 
 
-  if (showPrivacy) {
+  if (
+    showPrivacy
+  ) {
     return (
       <PrivacyPage
-        onBack={closePrivacy}
+        onBack={
+          closePrivacy
+        }
       />
     );
   }
@@ -899,7 +1079,8 @@ function App() {
 
   if (
     currentUser &&
-    currentUser.role !== "admin" &&
+    currentUser.role !==
+      "admin" &&
     showCelebration
   ) {
     return (
@@ -917,11 +1098,14 @@ function App() {
 
   if (
     currentUser &&
-    currentUser.role === "admin"
+    currentUser.role ===
+      "admin"
   ) {
     return (
       <AdminDashboard
-        token={authToken}
+        token={
+          authToken
+        }
         username={
           currentUser.username
         }
@@ -935,7 +1119,8 @@ function App() {
 
   if (currentUser) {
     if (
-      currentUser.verification_status ===
+      currentUser
+        .verification_status ===
       "pending"
     ) {
       return (
@@ -946,54 +1131,60 @@ function App() {
             </p>
 
             <h1>
-              You&apos;re almost there!
+              You&apos;re almost
+              there!
             </h1>
 
             <p>
-              Your account was created
-              successfully!
+              Your account was
+              created successfully!
             </p>
 
             <p>
-              Verification is completed
-              manually by the Get Connected
-              admin using the legal name and
+              Verification is
+              completed manually by
+              the Get Connected admin
+              using the legal name and
               major you submitted.
             </p>
 
             <p>
-              During active hours this may
-              take only a few minutes. If
-              you signed up late at night
-              or while the admin is
-              unavailable, it may take
-              longer.
+              During active hours this
+              may take only a few
+              minutes. If you signed
+              up late at night or
+              while the admin is
+              unavailable, it may
+              take longer.
             </p>
 
             <p>
-              You can leave this page open
-              while your account is waiting
-              for review.
+              You can leave this page
+              open while your account
+              is waiting for review.
             </p>
 
             <p className="privacy-note">
               <strong>
-                Automatic status check:
+                Automatic status
+                check:
               </strong>{" "}
-              Get Connected checks your
-              verification status about
-              every 45 seconds while this
-              page is open, and again when
-              you return to this tab.
-              You can also check manually
-              below.
+              Get Connected checks
+              your verification status
+              about every 45 seconds
+              while this page is open,
+              and again when you
+              return to this tab.
+              You can also check
+              manually below.
             </p>
 
             <p className="privacy-note">
-              Get Connected does not need
-              your GMU email, personal
-              email, Mason password, Duo
-              code, or any other university
+              Get Connected does not
+              need your GMU email,
+              personal email, Mason
+              password, Duo code, or
+              any other university
               login credentials for
               verification.
             </p>
@@ -1005,7 +1196,9 @@ function App() {
             <button
               className="main-button"
               type="button"
-              disabled={loading}
+              disabled={
+                loading
+              }
               onClick={
                 refreshVerificationStatus
               }
@@ -1031,7 +1224,8 @@ function App() {
 
 
     if (
-      currentUser.verification_status ===
+      currentUser
+        .verification_status ===
       "needs_info"
     ) {
       return (
@@ -1052,8 +1246,9 @@ function App() {
             </p>
 
             <p>
-              We just need some additional
-              information before your GMU
+              We just need some
+              additional information
+              before your GMU
               verification can be
               completed.
             </p>
@@ -1064,15 +1259,15 @@ function App() {
 
             <p>
               <strong>
-                Message from the admin:
+                Message from the
+                admin:
               </strong>
             </p>
 
             <p>
-              {
-                currentUser.verification_admin_note ||
-                "Please provide the additional details requested by the admin."
-              }
+              {currentUser
+                .verification_admin_note ||
+                "Please provide the additional details requested by the admin."}
             </p>
 
             <form
@@ -1083,7 +1278,9 @@ function App() {
                 width: "100%",
               }}
             >
-              <label htmlFor="verification-reply">
+              <label
+                htmlFor="verification-reply"
+              >
                 Your response
               </label>
 
@@ -1092,8 +1289,12 @@ function App() {
                 rows={5}
                 maxLength={2000}
                 required
-                value={verificationReply}
-                onChange={(event) =>
+                value={
+                  verificationReply
+                }
+                onChange={(
+                  event
+                ) =>
                   setVerificationReply(
                     event.target.value
                   )
@@ -1101,7 +1302,8 @@ function App() {
                 placeholder="Explain or correct your student information here. Never share passwords or Duo codes."
                 style={{
                   width: "100%",
-                  margin: "12px 0",
+                  margin:
+                    "12px 0",
                   padding: "10px",
                 }}
               />
@@ -1111,7 +1313,8 @@ function App() {
                 type="submit"
                 disabled={
                   loading ||
-                  !verificationReply.trim()
+                  !verificationReply
+                    .trim()
                 }
               >
                 {loading
@@ -1146,18 +1349,31 @@ function App() {
       "my-profile"
     ) {
       return (
-        <MyProfile
-          token={authToken}
-          currentUser={
-            currentUser
-          }
-          onBackToBulletin={() =>
-            window.history.back()
-          }
-          onLogout={
-            handleLogout
-          }
-        />
+        <>
+          <MyProfile
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+            onBackToBulletin={() =>
+              window.history.back()
+            }
+            onLogout={
+              handleLogout
+            }
+          />
+
+          <ChangelogDock
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+          />
+        </>
       );
     }
 
@@ -1167,54 +1383,95 @@ function App() {
       "safety-center"
     ) {
       return (
-        <SafetyCenter
-          token={authToken}
-          onBack={() =>
-            window.history.back()
-          }
-          onLogout={
-            handleLogout
-          }
-        />
+        <>
+          <SafetyCenter
+            token={
+              authToken
+            }
+            onBack={() =>
+              window.history.back()
+            }
+            onLogout={
+              handleLogout
+            }
+          />
+
+          <ChangelogDock
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+          />
+        </>
       );
     }
 
 
     if (
-      studentView === "chat" &&
+      studentView ===
+        "chat" &&
       selectedChat
     ) {
       return (
-        <ChatPage
-          token={authToken}
-          currentUser={
-            currentUser
-          }
-          connection={
-            selectedChat
-          }
-          onBack={() =>
-            window.history.back()
-          }
-        />
+        <>
+          <ChatPage
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+            connection={
+              selectedChat
+            }
+            onBack={() =>
+              window.history.back()
+            }
+          />
+
+          <ChangelogDock
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+          />
+        </>
       );
     }
 
 
     if (
-      studentView === "profile" &&
+      studentView ===
+        "profile" &&
       selectedProfileUserId
     ) {
       return (
-        <PublicProfile
-          token={authToken}
-          userId={
-            selectedProfileUserId
-          }
-          onBack={() =>
-            window.history.back()
-          }
-        />
+        <>
+          <PublicProfile
+            token={
+              authToken
+            }
+            userId={
+              selectedProfileUserId
+            }
+            onBack={() =>
+              window.history.back()
+            }
+          />
+
+          <ChangelogDock
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+          />
+        </>
       );
     }
 
@@ -1224,53 +1481,88 @@ function App() {
       "connections"
     ) {
       return (
-        <MyConnections
-          token={authToken}
-          onViewProfile={
-            openProfile
-          }
-          onOpenChat={
-            openChat
-          }
-          onBackToBulletin={() =>
-            window.history.back()
-          }
-          onLogout={
-            handleLogout
-          }
-        />
+        <>
+          <MyConnections
+            token={
+              authToken
+            }
+            onViewProfile={
+              openProfile
+            }
+            onOpenChat={
+              openChat
+            }
+            onBackToBulletin={() =>
+              window.history.back()
+            }
+            onLogout={
+              handleLogout
+            }
+          />
+
+          <ChangelogDock
+            token={
+              authToken
+            }
+            currentUser={
+              currentUser
+            }
+          />
+        </>
       );
     }
 
 
     return (
-      <BulletinBoard
-        token={authToken}
-        currentUser={
-          currentUser
-        }
-        onOpenMyProfile={() =>
-          pushRoute(
-            "/my-profile",
-            { view: "my-profile" }
-          )
-        }
-        onOpenConnections={() =>
-          pushRoute(
-            "/connections",
-            { view: "connections" }
-          )
-        }
-        onOpenSafetyCenter={() =>
-          pushRoute(
-            "/safety",
-            { view: "safety-center" }
-          )
-        }
-        onLogout={
-          handleLogout
-        }
-      />
+      <>
+        <BulletinBoard
+          token={
+            authToken
+          }
+          currentUser={
+            currentUser
+          }
+          onOpenMyProfile={() =>
+            pushRoute(
+              "/my-profile",
+              {
+                view:
+                  "my-profile",
+              }
+            )
+          }
+          onOpenConnections={() =>
+            pushRoute(
+              "/connections",
+              {
+                view:
+                  "connections",
+              }
+            )
+          }
+          onOpenSafetyCenter={() =>
+            pushRoute(
+              "/safety",
+              {
+                view:
+                  "safety-center",
+              }
+            )
+          }
+          onLogout={
+            handleLogout
+          }
+        />
+
+        <ChangelogDock
+          token={
+            authToken
+          }
+          currentUser={
+            currentUser
+          }
+        />
+      </>
     );
   }
 
@@ -1278,11 +1570,15 @@ function App() {
   if (!showAuth) {
     return (
       <LandingPage
-        onLogin={openLoginPage}
+        onLogin={
+          openLoginPage
+        }
         onCreateAccount={
           openRegisterPage
         }
-        onPrivacy={openPrivacy}
+        onPrivacy={
+          openPrivacy
+        }
       />
     );
   }
@@ -1294,14 +1590,17 @@ function App() {
         <button
           className="auth-home-button"
           type="button"
-          onClick={closeAuthPage}
+          onClick={
+            closeAuthPage
+          }
         >
           ← Back to Home
         </button>
 
         <div className="intro">
           <p className="small-title">
-            A STUDENT-BUILT MASON COMMUNITY
+            A STUDENT-BUILT MASON
+            COMMUNITY
           </p>
 
           <h1>
@@ -1309,18 +1608,21 @@ function App() {
           </h1>
 
           <p className="description">
-            Meet students, discover shared
-            interests, and connect with people
-            around campus you might never have
-            met otherwise.
+            Meet students, discover
+            shared interests, and
+            connect with people around
+            campus you might never
+            have met otherwise.
           </p>
 
           <p className="privacy-note">
             <strong>
-              Unofficial student project.
+              Unofficial student
+              project.
             </strong>{" "}
-            Get Connected is not affiliated
-            with or endorsed by George Mason
+            Get Connected is not
+            affiliated with or
+            endorsed by George Mason
             University.
           </p>
 
@@ -1329,10 +1631,11 @@ function App() {
               Independent login:
             </strong>{" "}
             Get Connected uses its own
-            username and password system.
-            Never enter your Mason password,
-            Duo code, or other university
-            login credentials here.
+            username and password
+            system. Never enter your
+            Mason password, Duo code,
+            or other university login
+            credentials here.
           </p>
         </div>
 
@@ -1346,7 +1649,10 @@ function App() {
             }
             type="button"
             onClick={() => {
-              setMode("login");
+              setMode(
+                "login"
+              );
+
               setMessage("");
             }}
           >
@@ -1361,7 +1667,10 @@ function App() {
             }
             type="button"
             onClick={() => {
-              setMode("register");
+              setMode(
+                "register"
+              );
+
               setMessage("");
             }}
           >
@@ -1382,10 +1691,16 @@ function App() {
 
               <input
                 type="text"
-                value={username}
-                onChange={(event) =>
+                value={
+                  username
+                }
+                onChange={(
+                  event
+                ) =>
                   setUsername(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1397,10 +1712,16 @@ function App() {
 
               <input
                 type="password"
-                value={password}
-                onChange={(event) =>
+                value={
+                  password
+                }
+                onChange={(
+                  event
+                ) =>
                   setPassword(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1410,7 +1731,9 @@ function App() {
             <button
               className="main-button"
               type="submit"
-              disabled={loading}
+              disabled={
+                loading
+              }
             >
               {loading
                 ? "Logging in..."
@@ -1429,10 +1752,16 @@ function App() {
 
               <input
                 type="text"
-                value={username}
-                onChange={(event) =>
+                value={
+                  username
+                }
+                onChange={(
+                  event
+                ) =>
                   setUsername(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1444,10 +1773,16 @@ function App() {
 
               <input
                 type="password"
-                value={password}
-                onChange={(event) =>
+                value={
+                  password
+                }
+                onChange={(
+                  event
+                ) =>
                   setPassword(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1455,14 +1790,20 @@ function App() {
             </label>
 
             <label>
-              Type password again
+              Confirm password
 
               <input
                 type="password"
-                value={confirmPassword}
-                onChange={(event) =>
+                value={
+                  confirmPassword
+                }
+                onChange={(
+                  event
+                ) =>
                   setConfirmPassword(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1474,10 +1815,16 @@ function App() {
 
               <input
                 type="text"
-                value={fullName}
-                onChange={(event) =>
+                value={
+                  fullName
+                }
+                onChange={(
+                  event
+                ) =>
                   setFullName(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1489,10 +1836,16 @@ function App() {
 
               <input
                 type="text"
-                value={major}
-                onChange={(event) =>
+                value={
+                  major
+                }
+                onChange={(
+                  event
+                ) =>
                   setMajor(
-                    event.target.value
+                    event
+                      .target
+                      .value
                   )
                 }
                 required
@@ -1503,27 +1856,33 @@ function App() {
               <strong>
                 Student verification:
               </strong>{" "}
-              We only ask for your full legal
-              name and major during student
-              verification. Your legal name
-              stays private and is never shown
-              to other students. Your major is
-              shown only to other verified
-              Get Connected students after
-              approval.
+              We only ask for your
+              full legal name and
+              major during student
+              verification. Your legal
+              name stays private and
+              is never shown to other
+              students. Your major is
+              shown only to other
+              verified Get Connected
+              students after approval.
               <br />
               <br />
-              You do not need to provide a
-              GMU email address, personal
-              email address, Mason password,
+              You do not need to
+              provide a GMU email
+              address, personal email
+              address, Mason password,
               Duo code, or any other
-              university login credentials.
+              university login
+              credentials.
             </p>
 
             <button
               className="main-button"
               type="submit"
-              disabled={loading}
+              disabled={
+                loading
+              }
             >
               {loading
                 ? "Creating..."
@@ -1542,16 +1901,19 @@ function App() {
         <div className="site-legal-links">
           <button
             type="button"
-            onClick={openPrivacy}
+            onClick={
+              openPrivacy
+            }
           >
-            Privacy & Site Information
+            Privacy & Site
+            Information
           </button>
 
           <p>
             Unofficial student-built
-            project. Not affiliated with
-            or endorsed by George Mason
-            University.
+            project. Not affiliated
+            with or endorsed by George
+            Mason University.
           </p>
         </div>
       </section>

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     String,
@@ -36,6 +37,12 @@ class Profile(Base):
     interests: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
+    )
+
+    identity_items: Mapped[list[str]] = mapped_column(
+        JSON,
+        default=list,
+        nullable=False,
     )
 
     favorite_quote: Mapped[str | None] = mapped_column(

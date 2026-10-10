@@ -581,15 +581,18 @@ def get_connection_suggestions(
         )
     )
 
-    if my_profile is not None:
-        my_interests = (
-            get_profile_interests(
-                db,
-                my_profile,
-            )
+    if my_profile is None:
+        return []
+
+    my_interests = (
+        get_profile_interests(
+            db,
+            my_profile,
         )
-    else:
-        my_interests = {}
+    )
+
+    if not my_interests:
+        return []
 
     direct_ids = (
         get_direct_connection_ids(
@@ -603,6 +606,9 @@ def get_connection_suggestions(
         user.id,
         direct_ids,
     )
+
+    if not mutual_map:
+        return []
 
     candidate_profiles = db.scalars(
         select(Profile).where(
@@ -621,6 +627,9 @@ def get_connection_suggestions(
         )
 
         if candidate_id in direct_ids:
+            continue
+
+        if candidate_id not in mutual_map:
             continue
 
         if users_are_blocked(
@@ -690,6 +699,9 @@ def get_connection_suggestions(
             for key in shared_keys
         ]
 
+        if not shared_interests:
+            continue
+
         mutual_names = (
             get_mutual_names(
                 db,
@@ -701,10 +713,7 @@ def get_connection_suggestions(
             )
         )
 
-        if (
-            not shared_interests
-            and not mutual_names
-        ):
+        if not mutual_names:
             continue
 
         suggestions.append(
